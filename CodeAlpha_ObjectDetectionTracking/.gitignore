@@ -1,0 +1,60 @@
+# Python Bytecode & Environments
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyTorch, ONNX & YOLO Model Weights
+*.pt
+*.pth
+*.onnx
+*.engine
+*.tflite
+runs/
+datasets/
+.ultralytics/
+
+# Output & Sample Media (Keep READMEs)
+output/*.mp4
+output/*.avi
+output/*.mkv
+output/*.mov
+!output/README.md
+
+sample/*.mp4
+sample/*.avi
+sample/*.mkv
+sample/*.mov
+!sample/README.md
+
+# Screenshots
+screenshots/*.png
+screenshots/*.jpg
+!screenshots/README.md
+
+# OS / Editor Configurations
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+.env

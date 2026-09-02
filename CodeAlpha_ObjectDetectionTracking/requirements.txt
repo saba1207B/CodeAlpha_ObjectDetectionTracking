@@ -1,0 +1,12 @@
+# Computer Vision & Deep Learning Core
+ultralytics>=8.3.0
+opencv-python>=4.8.0
+numpy>=1.24.0,<2.0.0
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Multi-Object Tracking & Dependency Utilities
+lapx>=0.5.5
+filterpy>=1.4.5
+matplotlib>=3.7.0
+pillow>=10.0.0

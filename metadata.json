@@ -1,0 +1,6 @@
+{
+  "name": "Object Tracking",
+  "description": "CodeAlpha Object Detection and Tracking with YOLO and ByteTrack",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
