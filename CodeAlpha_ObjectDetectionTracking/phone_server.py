@@ -1,133 +1,294 @@
-#!/usr/bin/env python3
 """
-phone_server.py
-===============
-Local HTTP camera receiver for the Android companion app.
+CodeAlpha AI Internship - Task 4: Object Detection & Tracking
+Phone Camera Receiver Server (Standard Library HTTP Server)
 
-The Android app sends JPEG frames to POST /frame. This server keeps only the
-latest frame so the YOLO + ByteTrack pipeline can process it without building
-an unbounded queue.
+This server receives JPEG frames uploaded by the Android Camera Client via HTTP POST /frame,
+stores the latest frame in a thread-safe buffer, and serves frames to YOLO/ByteTrack in app.py.
+
+Endpoints:
+    - GET  /             : Health check and connectivity verification
+    - POST /frame        : Receives JPEG camera frames from Android phone
+    - GET  /latest_frame : Serves latest frame to detection pipeline / testing tools
+    - GET  /status       : Diagnostic metrics (frame count, FPS, client info)
 """
 
-from __future__ import annotations
-
-import socket
+import argparse
+import json
+import sys
+import time
 import threading
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Optional
+from http.server import HTTPServer, ThreadingHTTPServer, BaseHTTPRequestHandler
+from typing import Optional, Tuple, Any
 
-import cv2
-import numpy as np
+# Graceful OpenCV and NumPy import with clear user instructions
+try:
+    import cv2
+    import numpy as np
+    OPENCV_AVAILABLE = True
+except ImportError:
+    OPENCV_AVAILABLE = False
+    cv2 = None
+    np = None
 
 
-class PhoneFrameStore:
-    """Thread-safe latest-frame buffer shared by the HTTP server and AI loop."""
+class PhoneFrameBuffer:
+    """Thread-safe storage for the most recent camera frame received from the phone."""
 
-    def __init__(self) -> None:
+    def __init__(self):
         self._lock = threading.Lock()
-        self._frame: Optional[np.ndarray] = None
-        self._sequence = 0
+        self._latest_jpeg: Optional[bytes] = None
+        self._latest_frame: Optional[Any] = None
+        self._frame_count: int = 0
+        self._last_received_time: float = 0.0
+        self._first_frame_logged: bool = False
+        self._client_address: str = "None"
+        self._fps_counter: int = 0
+        self._fps_last_time: float = time.time()
+        self._current_fps: float = 0.0
+        self._frame_width: int = 0
+        self._frame_height: int = 0
 
-    def set_jpeg(self, data: bytes) -> bool:
-        array = np.frombuffer(data, dtype=np.uint8)
-        frame = cv2.imdecode(array, cv2.IMREAD_COLOR)
-        if frame is None:
+    def update(self, jpeg_bytes: bytes, client_ip: str) -> bool:
+        """Store the latest JPEG and decode if OpenCV is available."""
+        if not jpeg_bytes or len(jpeg_bytes) < 10:
             return False
+
+        decoded = None
+        if OPENCV_AVAILABLE and np is not None:
+            np_arr = np.frombuffer(jpeg_bytes, dtype=np.uint8)
+            decoded = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+            if decoded is None or decoded.size == 0:
+                return False
+
         with self._lock:
-            self._frame = frame
-            self._sequence += 1
+            self._latest_jpeg = jpeg_bytes
+            self._latest_frame = decoded
+            self._frame_count += 1
+            now = time.time()
+            self._last_received_time = now
+            self._client_address = client_ip
+
+            if decoded is not None:
+                self._frame_height, self._frame_width = decoded.shape[:2]
+
+            # Calculate intake FPS
+            self._fps_counter += 1
+            if now - self._fps_last_time >= 1.0:
+                self._current_fps = self._fps_counter / (now - self._fps_last_time)
+                self._fps_counter = 0
+                self._fps_last_time = now
+
+            if not self._first_frame_logged:
+                print(f"\n[+] FIRST FRAME RECEIVED from {client_ip}!")
+                if self._frame_width > 0:
+                    print(f"    Resolution: {self._frame_width}x{self._frame_height} px | Active stream.")
+                print("    Ready for: python app.py --source phone\n")
+                self._first_frame_logged = True
+
         return True
 
-    def get(self) -> tuple[Optional[np.ndarray], int]:
+    def get_latest_frame(self) -> Tuple[Optional[Any], float]:
+        """Return a copy of the latest decoded frame and its timestamp."""
         with self._lock:
-            if self._frame is None:
-                return None, self._sequence
-            return self._frame.copy(), self._sequence
+            if self._latest_frame is None:
+                return None, 0.0
+            return self._latest_frame.copy(), self._last_received_time
+
+    def get_latest_jpeg(self) -> Tuple[Optional[bytes], float]:
+        """Return raw JPEG bytes and timestamp."""
+        with self._lock:
+            return self._latest_jpeg, self._last_received_time
+
+    def get_stats(self) -> dict:
+        """Return operational statistics."""
+        with self._lock:
+            return {
+                "frame_count": self._frame_count,
+                "current_fps": round(self._current_fps, 1),
+                "resolution": f"{self._frame_width}x{self._frame_height}" if self._frame_width > 0 else "Pending",
+                "client_address": self._client_address,
+                "opencv_loaded": OPENCV_AVAILABLE,
+                "seconds_since_last_frame": round(time.time() - self._last_received_time, 2) if self._last_received_time > 0 else None,
+                "is_receiving": (time.time() - self._last_received_time < 3.0) if self._last_received_time > 0 else False
+            }
 
 
-class PhoneRequestHandler(BaseHTTPRequestHandler):
-    """Receive Android JPEG frames and expose a simple health endpoint."""
+# Global shared buffer instance
+FRAME_BUFFER = PhoneFrameBuffer()
 
-    server_version = "CodeAlphaPhoneCamera/1.0"
 
-    def do_GET(self) -> None:  # noqa: N802
-        if self.path in ("/", "/health"):
-            body = b"CodeAlpha phone camera receiver is running. POST JPEG frames to /frame."
+class PhoneCameraHTTPHandler(BaseHTTPRequestHandler):
+    """HTTP request handler for phone camera communication."""
+
+    server_version = "CodeAlphaPhoneServer/1.0"
+
+    def log_message(self, format, *args):
+        # Suppress routine 200 access logs for POST /frame to avoid console flood
+        if len(args) >= 2 and "POST /frame" in str(args[0]) and "200" in str(args[1]):
+            return
+        super().log_message(format, *args)
+
+    def do_GET(self):
+        """Handle GET requests for health check, status, and latest frame."""
+        clean_path = self.path.split("?")[0]
+
+        if clean_path == "/" or clean_path == "/health":
+            body = (
+                "CodeAlpha Object Detection & Tracking Server\n"
+                "Status: Running\n"
+                "Endpoint: POST /frame\n"
+            ).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
-            return
-        self.send_error(404, "Not found")
 
-    def do_POST(self) -> None:  # noqa: N802
-        if self.path != "/frame":
-            self.send_error(404, "POST /frame expected")
-            return
+        elif clean_path == "/latest_frame":
+            jpeg_bytes, timestamp = FRAME_BUFFER.get_latest_jpeg()
+            if jpeg_bytes is None:
+                err_msg = b"No phone frame received yet. Start camera in the Android app."
+                self.send_response(503)
+                self.send_header("Content-Type", "text/plain")
+                self.send_header("Content-Length", str(len(err_msg)))
+                self.end_headers()
+                self.wfile.write(err_msg)
+            else:
+                self.send_response(200)
+                self.send_header("Content-Type", "image/jpeg")
+                self.send_header("Content-Length", str(len(jpeg_bytes)))
+                self.send_header("X-Frame-Timestamp", str(timestamp))
+                self.end_headers()
+                self.wfile.write(jpeg_bytes)
 
-        try:
-            length = int(self.headers.get("Content-Length", "0"))
-            if length <= 0 or length > 8 * 1024 * 1024:
-                self.send_error(400, "Invalid frame size")
-                return
-            payload = self.rfile.read(length)
-            if not self.server.frame_store.set_jpeg(payload):
-                self.send_error(400, "Invalid JPEG frame")
-                return
-
-            body = b"OK"
+        elif clean_path == "/status":
+            stats = FRAME_BUFFER.get_stats()
+            body = json.dumps(stats, indent=2).encode("utf-8")
             self.send_response(200)
-            self.send_header("Content-Type", "text/plain")
+            self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
-        except (ConnectionError, BrokenPipeError):
-            pass
-        except Exception as exc:
-            self.send_error(500, f"Receiver error: {exc}")
 
-    def log_message(self, format: str, *args) -> None:
-        # Keep the terminal readable; the AI application prints its own status.
-        return
+        else:
+            msg = b"404 Not Found"
+            self.send_response(404)
+            self.send_header("Content-Type", "text/plain")
+            self.send_header("Content-Length", str(len(msg)))
+            self.end_headers()
+            self.wfile.write(msg)
+
+    def do_POST(self):
+        """Handle incoming JPEG frames from Android phone."""
+        clean_path = self.path.split("?")[0]
+
+        if clean_path == "/frame":
+            try:
+                content_length = int(self.headers.get("Content-Length", 0))
+                if content_length <= 0:
+                    self._send_error_response(400, "Content-Length header missing or zero")
+                    return
+
+                # Read JPEG body
+                jpeg_bytes = self.rfile.read(content_length)
+                client_ip = self.client_address[0]
+
+                success = FRAME_BUFFER.update(jpeg_bytes, client_ip)
+                if not success:
+                    self._send_error_response(400, "Failed to decode JPEG payload")
+                    return
+
+                # Return success response
+                resp = b'{"status":"ok"}'
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(resp)))
+                self.end_headers()
+                self.wfile.write(resp)
+
+            except Exception as e:
+                self._send_error_response(500, f"Internal server error: {str(e)}")
+        else:
+            self._send_error_response(404, "Endpoint not found. Use POST /frame")
+
+    def _send_error_response(self, code: int, message: str):
+        body = json.dumps({"status": "error", "message": message}).encode("utf-8")
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
 
-class PhoneFrameServer:
-    """Background HTTP server that provides the latest phone camera frame."""
+def run_server(host: str = "0.0.0.0", port: int = 5000) -> None:
+    """Start the multi-threaded HTTP server and keep it running safely."""
+    server_address = (host, port)
 
-    def __init__(self, host: str = "0.0.0.0", port: int = 5000) -> None:
-        self.host = host
-        self.port = port
-        self.frame_store = PhoneFrameStore()
-        self._server = ThreadingHTTPServer((host, port), PhoneRequestHandler)
-        self._server.frame_store = self.frame_store
-        self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
+    try:
+        httpd = ThreadingHTTPServer(server_address, PhoneCameraHTTPHandler)
+    except OSError as e:
+        print("\n" + "=" * 60)
+        print(f"[!] SERVER BIND ERROR: Unable to bind to {host}:{port}")
+        print(f"    Details: {e}")
+        if "Address already in use" in str(e) or 98 in getattr(e, "args", []):
+            print(f"    Port {port} is already occupied by another process.")
+            print(f"    Please stop the existing process or use a different port:")
+            print(f"    python phone_server.py --port 5001")
+        print("=" * 60 + "\n")
+        sys.exit(1)
 
-    def start(self) -> None:
-        self._thread.start()
-        print(f"[PHONE] Receiver listening on http://{self._local_ip()}:{self.port}")
-        print(f"[PHONE] Android endpoint: http://<LAPTOP-IP>:{self.port}/frame")
-        print("[PHONE] Waiting for the Android camera to send frames...\n")
+    print("==================================================")
+    print("CodeAlpha Object Detection & Tracking")
+    print("Phone Camera Server")
+    print("==================================================")
+    print("Listening on:")
+    print(f"http://{host}:{port}")
+    print()
+    print("Waiting for phone camera frames...")
+    print("==================================================")
+    if not OPENCV_AVAILABLE:
+        print("[!] NOTICE: Running in lightweight storage mode (OpenCV not in active Python environment).")
+        print("    For full YOLO detection and tracking in app.py, please activate your venv:")
+        print("    pip install -r requirements.txt")
+        print("==================================================")
+    print(" [i] USAGE NOTES:")
+    print("     - On Android phone, enter: http://<LAPTOP_IP>:5000")
+    print("     - Find your laptop IP via 'ipconfig' (Windows) or 'ip a' (Linux)")
+    print("     - Test server connectivity: curl http://127.0.0.1:5000")
+    print("     - Press Ctrl+C at any time to shut down the server.")
+    print("=" * 50 + "\n")
 
-    def read(self, last_sequence: int = -1) -> tuple[Optional[np.ndarray], int]:
-        frame, sequence = self.frame_store.get()
-        if sequence == last_sequence:
-            return None, sequence
-        return frame, sequence
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\n[i] Shutting down phone camera server safely...")
+    except Exception as e:
+        print(f"\n[!] Unexpected server exception: {e}")
+    finally:
+        httpd.server_close()
+        print("[+] Server stopped.\n")
 
-    def is_ready(self) -> bool:
-        frame, _ = self.frame_store.get()
-        return frame is not None
 
-    def release(self) -> None:
-        self._server.shutdown()
-        self._server.server_close()
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description="CodeAlpha Phone Camera Server for YOLO & ByteTrack",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument(
+        "--host",
+        type=str,
+        default="0.0.0.0",
+        help="Network interface to bind to (0.0.0.0 enables LAN/Hotspot/USB access)"
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=5000,
+        help="Port number to listen on"
+    )
+    return parser.parse_args()
 
-    @staticmethod
-    def _local_ip() -> str:
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-                sock.connect(("8.8.8.8", 80))
-                return sock.getsockname()[0]
-        except OSError:
-            return "127.0.0.1"
+
+if __name__ == "__main__":
+    args = parse_arguments()
+    run_server(host=args.host, port=args.port)
