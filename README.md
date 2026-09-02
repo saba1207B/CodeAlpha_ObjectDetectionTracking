@@ -1,74 +1,98 @@
 # CodeAlpha Object Detection & Tracking 👁️
 
-**CodeAlpha Artificial Intelligence Internship — Task 4: Object Detection and Tracking**
+> A real-time computer vision application for detecting and tracking multiple objects using YOLO and ByteTrack.
 
-A computer-vision project built around **Ultralytics YOLO + ByteTrack** for real-time multi-object detection and tracking. The complete CodeAlpha implementation is maintained in `CodeAlpha_ObjectDetectionTracking/`.
+[![Python](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
+[![YOLO](https://img.shields.io/badge/AI-Ultralytics%20YOLO-orange.svg)](https://www.ultralytics.com/)
+[![OpenCV](https://img.shields.io/badge/Computer%20Vision-OpenCV-green.svg)](https://opencv.org/)
+[![ByteTrack](https://img.shields.io/badge/Tracking-ByteTrack-purple.svg)](https://github.com/ifzhang/ByteTrack)
+[![CodeAlpha](https://img.shields.io/badge/CodeAlpha-AI%20Internship-black.svg)](https://www.codealpha.tech/)
 
-## 🎯 Task 4 Implementation
+## 📱 Overview
 
-The Python application provides:
+**CodeAlpha Object Detection & Tracking** is a computer vision project that detects objects in real time and assigns persistent tracking IDs as they move between video frames.
 
-- Pretrained YOLO object detection
-- Real multi-object tracking with ByteTrack
-- Optional BoT-SORT tracking
-- Persistent tracking IDs across frames
-- Bounding boxes, labels and confidence scores
-- Motion trajectory trails
-- Webcam and video-file input
-- Configurable confidence and IoU thresholds
-- Class filtering
-- FPS/track statistics HUD
-- Screenshot capture
-- Annotated video export
-- Headless batch processing
-- Graceful resource cleanup
+The project uses **Ultralytics YOLO** for object detection and **ByteTrack** for multi-object tracking, with OpenCV providing video processing and visualisation.
 
-## 🧠 Pipeline
+This project was developed as part of the **CodeAlpha Artificial Intelligence Internship — Task 4: Object Detection and Tracking**.
+
+## ✨ Features
+
+### 🎯 Object Detection
+
+- Real-time object detection with YOLO.
+- Bounding boxes with class labels.
+- Detection confidence scores.
+- Configurable confidence and IoU thresholds.
+- Optional class filtering.
+
+### 👁️ Object Tracking
+
+- Multi-object tracking with ByteTrack.
+- Persistent tracking IDs across video frames.
+- Optional BoT-SORT tracking.
+- Motion trajectory trails.
+- Active and unique object statistics.
+
+### 🎥 Video Processing
+
+- Webcam input.
+- Video-file input.
+- Annotated video export.
+- Screenshot capture.
+- Headless batch processing.
+- FPS and tracking statistics HUD.
+
+## 🧠 How It Works
 
 ```text
 Webcam / Video
       ↓
- OpenCV Frames
+OpenCV Frame Processing
       ↓
- YOLO Detection
+YOLO Object Detection
       ↓
 Bounding Boxes + Classes + Confidence
       ↓
 ByteTrack / BoT-SORT
       ↓
-Persistent Track IDs
+Persistent Tracking IDs
       ↓
 Annotations + Trails + Statistics
 ```
 
-The tracker uses the Ultralytics tracking interface with `persist=True`, so IDs are produced by a real multi-object tracking algorithm rather than by a simple counter or hardcoded logic.
+YOLO identifies objects in each frame, while the tracking stage associates detections across consecutive frames so that moving objects can retain their identities.
 
 ## 🛠️ Technology Stack
 
-- Python 3.9+
-- Ultralytics YOLO
-- OpenCV
-- NumPy
-- ByteTrack / BoT-SORT
-- Kotlin + Jetpack Compose for the Android module
+| Category | Technology |
+|---|---|
+| Language | Python |
+| Object Detection | Ultralytics YOLO |
+| Computer Vision | OpenCV |
+| Object Tracking | ByteTrack / BoT-SORT |
+| Numerical Processing | NumPy |
+| Deep Learning | PyTorch |
+| Android Module | Kotlin + Jetpack Compose |
+| Build Automation | GitHub Actions |
 
-## 📁 Repository Structure
+## 🏗️ Project Structure
 
 ```text
 CodeAlpha_ObjectDetectionTracking/
 ├── app/                              # Android application module
 ├── CodeAlpha_ObjectDetectionTracking/
-│   ├── app.py                        # Python CLI application
+│   ├── app.py                        # Main Python application
 │   ├── requirements.txt              # Python dependencies
-│   ├── README.md                     # Detailed Python documentation
 │   ├── src/
-│   │   ├── __init__.py
-│   │   ├── detector.py               # YOLO detection wrapper
+│   │   ├── detector.py               # YOLO detection
 │   │   └── tracker.py                # Tracking and rendering
-│   ├── sample/                       # Sample-video instructions
-│   ├── screenshots/                  # Screenshot instructions
-│   └── output/                       # Output-video instructions
-├── .github/workflows/build-apk.yml   # Android APK CI build
+│   ├── sample/                        # Sample-video instructions
+│   ├── screenshots/                  # Screenshot resources
+│   └── output/                       # Output-video resources
+├── .github/
+│   └── workflows/
+│       └── build-apk.yml             # Android APK workflow
 ├── gradle/
 ├── build.gradle.kts
 ├── settings.gradle.kts
@@ -78,6 +102,14 @@ CodeAlpha_ObjectDetectionTracking/
 ```
 
 ## 🚀 Run the Python Application
+
+### Requirements
+
+- Python 3.9 or later.
+- A compatible environment for PyTorch and Ultralytics.
+- Webcam for live-camera detection, if desired.
+
+### Installation
 
 ```bash
 cd CodeAlpha_ObjectDetectionTracking
@@ -99,34 +131,16 @@ pip install -r requirements.txt
 python app.py --source 0
 ```
 
-### Video file
+### Video File
 
 ```bash
 python app.py --source sample/traffic.mp4
 ```
 
-### Save annotated video
+### Save Annotated Video
 
 ```bash
 python app.py --source sample/traffic.mp4 --save output/tracked_traffic.mp4
-```
-
-### Custom confidence
-
-```bash
-python app.py --source 0 --conf 0.50
-```
-
-### Selected classes
-
-```bash
-python app.py --source 0 --classes 0 2
-```
-
-### BoT-SORT
-
-```bash
-python app.py --source sample/traffic.mp4 --tracker botsort.yaml
 ```
 
 ## ⌨️ Controls
@@ -134,16 +148,16 @@ python app.py --source sample/traffic.mp4 --tracker botsort.yaml
 | Key | Action |
 |---|---|
 | `Q` / `ESC` | Quit |
-| `P` / `SPACE` | Pause/resume |
-| `T` | Toggle trails |
+| `P` / `SPACE` | Pause / resume |
+| `T` | Toggle tracking trails |
 | `H` | Toggle HUD |
 | `S` | Save screenshot |
 
 ## 📱 Android APK
 
-The repository also contains an Android application module. GitHub Actions builds a **debug APK** automatically on every push to `main` and through manual workflow dispatch.
+The repository also contains an Android application module and a GitHub Actions workflow for building a debug APK.
 
-The workflow uses JDK 17 and Gradle 9.3.1 and generates an isolated CI debug keystore, so no private signing key is committed to the repository.
+The APK workflow uses JDK 17 and Gradle 9.3.1 and creates an isolated CI debug keystore for the build.
 
 Artifact name:
 
@@ -151,58 +165,68 @@ Artifact name:
 CodeAlpha_ObjectDetectionTracking-debug-apk
 ```
 
-APK output inside the runner:
+> **Note:** The Python YOLO/ByteTrack implementation is the main CodeAlpha Task 4 implementation. The Android module currently serves as a companion application and does not directly execute the Python detection/tracking pipeline.
+
+## 📸 Screenshots
+
+Recommended project screenshots:
 
 ```text
-app/build/outputs/apk/debug/app-debug.apk
+screenshots/
+├── object-detection.png
+├── multi-object-tracking.png
+├── tracking-ids.png
+├── statistics-hud.png
+└── video-output.png
 ```
 
-> **Important:** The Python YOLO/ByteTrack implementation is the CodeAlpha Task 4 implementation. The Android module is currently a companion application and does not execute the Python YOLO/ByteTrack pipeline directly. Future work can add on-device YOLO inference and CameraX tracking.
+## 🎥 Project Demonstration
 
-## 📸 Submission Screenshots
+A short demonstration can show:
 
-Recommended captures:
+1. The CodeAlpha internship project introduction.
+2. Live object detection from a webcam or video.
+3. Multiple detected objects.
+4. Persistent tracking IDs while objects move.
+5. Tracking trails and performance statistics.
+6. The YOLO + ByteTrack pipeline.
+7. The GitHub repository and project structure.
 
-1. Person detection with a persistent tracking ID
-2. Multiple objects with different IDs
-3. Vehicle detection/tracking with confidence scores
-4. HUD showing FPS and active tracks
-5. Terminal session summary
+## 🎯 Internship Project
 
-## 🎥 LinkedIn Demo
+**Program:** CodeAlpha Artificial Intelligence Internship  
+**Task:** Task 4 — Object Detection and Tracking  
+**Project Type:** AI / Computer Vision  
+**Primary Technologies:** YOLO + ByteTrack + OpenCV
 
-A 60–90 second demonstration should show:
-
-1. Task 4 introduction
-2. Live webcam detection
-3. Persistent object IDs while objects move
-4. Multiple-object tracking
-5. YOLO + ByteTrack explanation
-6. GitHub architecture
-7. Final repository link
+The project is intended to demonstrate practical computer vision and AI implementation as part of internship evaluation and portfolio presentation.
 
 ## ⚠️ Limitations
 
-- Performance depends on hardware, resolution and model size.
-- CPU-only systems may have lower FPS.
-- IDs can change after prolonged disappearance or difficult occlusion.
-- Android on-device YOLO/tracking is not yet connected to the Python pipeline.
+- Detection and tracking performance depends on hardware and model size.
+- CPU-only systems may provide lower real-time FPS.
+- Tracking IDs can change after prolonged disappearance or difficult occlusion.
+- Android on-device YOLO inference is not yet connected to the Python pipeline.
 
 ## 🔮 Future Improvements
 
-- On-device YOLO inference
-- CameraX integration
-- GPU/NPU acceleration
-- Object counting and analytics
-- Zone-based alerts
-- Mobile video export
+- On-device YOLO inference.
+- CameraX integration for Android.
+- GPU/NPU acceleration.
+- Object counting and analytics.
+- Zone-based detection alerts.
+- Mobile video export.
 
 ## 👤 Author
 
 **Sabareesh**
 
-CodeAlpha Artificial Intelligence Internship — Task 4
+GitHub: [@saba1207B](https://github.com/saba1207B)
 
 ## 📄 License
 
 MIT License
+
+---
+
+⭐ If you find this project useful, consider starring the repository.
