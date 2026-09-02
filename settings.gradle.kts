@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Object Tracking"
+rootProject.name = "CodeAlpha Object Detection Tracking"
 
 include(":app")
