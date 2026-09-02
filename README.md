@@ -1,266 +1,148 @@
-# CodeAlpha Object Detection & Tracking
+# CodeAlpha Object Detection & Tracking 👁️
 
-[![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Android](https://img.shields.io/badge/Android-Kotlin%20%7C%20CameraX-3DDC84?logo=android&logoColor=white)](https://developer.android.com/)
-[![YOLO](https://img.shields.io/badge/YOLO-v11%20%2F%20v8-00FFFF?logo=ultralytics&logoColor=black)](https://github.com/ultralytics/ultralytics)
-[![Tracking](https://img.shields.io/badge/Tracker-ByteTrack%20%7C%20BoT--SORT-brightgreen)](https://github.com/ifzhang/ByteTrack)
+[![YOLO](https://img.shields.io/badge/YOLO-Ultralytics-00FFFF?logo=ultralytics&logoColor=black)](https://github.com/ultralytics/ultralytics)
 [![OpenCV](https://img.shields.io/badge/OpenCV-4.8%2B-red?logo=opencv&logoColor=white)](https://opencv.org/)
-[![Build APK](https://github.com/your-username/CodeAlpha_ObjectDetectionTracking/actions/workflows/build-apk.yml/badge.svg)](https://github.com/your-username/CodeAlpha_ObjectDetectionTracking/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Tracking](https://img.shields.io/badge/Tracking-ByteTrack%20%7C%20BoT--SORT-brightgreen)](https://github.com/ifzhang/ByteTrack)
+[![Build APK](https://github.com/saba1207B/CodeAlpha_ObjectDetectionTracking/actions/workflows/build-apk.yml/badge.svg)](https://github.com/saba1207B/CodeAlpha_ObjectDetectionTracking/actions/workflows/build-apk.yml)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
-## 1. Project Overview & CodeAlpha Internship
+## Overview
 
-- **Organization:** CodeAlpha
-- **Domain:** Artificial Intelligence Internship
-- **Task Number:** Task 4
-- **Task Title:** Object Detection and Tracking
-- **Repository:** `CodeAlpha_ObjectDetectionTracking`
+**CodeAlpha Object Detection & Tracking** is an end-to-end computer-vision project developed for the **CodeAlpha Artificial Intelligence Internship — Task 4: Object Detection and Tracking**.
 
-This project is a complete, production-grade system implementing real-time **Multi-Object Detection and Tracking (MOT)** across sequential video frames. The solution features an end-to-end distributed architecture: an **Android smartphone (CameraX client)** streams live camera frames over HTTP to a multi-threaded **Python server on a laptop**, which feeds the frames into **Ultralytics YOLO (v11/v8)** and **ByteTrack / BoT-SORT** to maintain persistent object identities, draw bounding boxes, compute rolling FPS, and render motion trajectory trails in real time.
+The project combines a native Android CameraX client with a Python computer-vision pipeline. The phone streams JPEG camera frames over a local network to a laptop, where **Ultralytics YOLO** performs object detection and **ByteTrack / BoT-SORT** maintains persistent object IDs.
 
-In addition to phone camera streaming, the pipeline natively supports local laptop webcams (`--source 0`) and pre-recorded video files (`--source sample/video.mp4`).
+The same Python pipeline can also process a laptop webcam or a prerecorded video file.
 
----
+## Architecture
 
-## 2. Key Features
-
-- 📱 **Real Android Camera Client:** Native Kotlin app powered by CameraX and OkHttp streaming low-latency JPEG frames with auto-rotation and live preview.
-- 🚀 **Zero-Lag Frame Buffer:** Multi-threaded HTTP receiver (`phone_server.py`) enforcing a "latest frame wins" policy to eliminate network lag accumulation.
-- 🧠 **Pretrained Deep Neural Networks:** Native inference with Ultralytics YOLOv11 and YOLOv8 models (`yolo11n.pt`, `yolov8n.pt`, etc.).
-- 🎯 **Multi-Class Detection:** Detects up to 80 COCO classes with configurable confidence, IoU, and class filters.
-- 🆔 **Persistent Multi-Object Tracking:** ByteTrack and BoT-SORT algorithms maintain persistent track IDs across frames and through partial occlusions.
-- 🌈 **Motion Trajectory Trails:** Displays fading centroid history lines showing historical object movement.
-- 📊 **Real-Time Heads-Up Display (HUD):** Shows rolling FPS, active tracks, cumulative unique IDs, and source metrics.
-- 💻 **Cross-Source Flexibility:** Switch effortlessly between phone camera (`--source phone`), laptop webcam (`--source 0`), and video files (`--source video.mp4`).
-- 🤖 **Automated CI/CD:** GitHub Actions workflow compiles the Android debug APK on push without requiring Android Studio on your development machine.
-
----
-
-## 3. System Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        ANDROID PHONE                        │
-│                                                             │
-│   CameraX Preview  ───>  ImageAnalysis Loop                 │
-│                                │                            │
-│                                ▼                            │
-│                        Rotation & Resize                    │
-│                        (640x480 JPEG)                       │
-│                                │                            │
-│                                ▼                            │
-│                     OkHttp FrameSender Client               │
-│                  (Atomic dropped frame throttle)            │
-└────────────────────────────────┬────────────────────────────┘
-                                 │
-                                 │ HTTP POST /frame (JPEG)
-                                 │ Over Wi-Fi / Hotspot / USB
-                                 ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    LAPTOP (PYTHON SERVER)                   │
-│                                                             │
-│   phone_server.py (ThreadingHTTPServer on 0.0.0.0:5000)     │
-│   ├── POST /frame        : Thread-safe FrameBuffer update   │
-│   ├── GET  /             : Health check                     │
-│   ├── GET  /latest_frame : Instant frame retrieval          │
-│   └── GET  /status       : Diagnostic metrics (FPS, stats)  │
-│                                │                            │
-│                                │ Thread-Safe Memory / HTTP  │
-│                                ▼                            │
-│   app.py --source phone                                     │
-│   ├── YOLOv11/v8 Object Detector (Classes + Confidence)     │
-│   ├── ByteTrack / BoT-SORT Tracker (Persistent IDs)         │
-│   ├── Motion Trajectory Trails & HUD Overlay                │
-│   └── OpenCV HighGUI Real-Time Window                       │
-└─────────────────────────────────────────────────────────────┘
+```text
+📱 Android Phone
+   CameraX + OkHttp
+          │
+          │ HTTP POST /frame
+          ▼
+💻 Laptop — Python
+   phone_server.py
+          │
+          ▼
+   OpenCV frame buffer
+          │
+          ▼
+   YOLO object detection
+          │
+          ▼
+   ByteTrack / BoT-SORT
+          │
+          ▼
+   Bounding boxes + IDs + trails + HUD
+          │
+          ▼
+   OpenCV live display / saved output
 ```
 
----
+## Features
 
-## 4. Technology Stack
+- 📱 Native Android camera client using Kotlin + CameraX
+- 🌐 Local HTTP streaming from phone to laptop
+- 🚀 Latest-frame-wins buffering to prevent latency buildup
+- 🧠 YOLO object detection with configurable confidence and IoU
+- 🎯 ByteTrack / BoT-SORT multi-object tracking
+- 🆔 Persistent tracking IDs across frames
+- 🌈 Optional motion trajectory trails
+- 📊 Live FPS, active-track and session statistics
+- 💻 Laptop webcam, phone camera and video-file input modes
+- 💾 Optional annotated video and screenshot output
+- 🔧 Built-in server health and status endpoints
+- 🤖 GitHub Actions APK build without Android Studio
 
-| Layer | Component | Technologies |
-| :--- | :--- | :--- |
-| **Android Client** | Camera Pipeline | Kotlin, AndroidX CameraX (1.4.1), Coroutines |
-| **Android Client** | UI & Networking | Jetpack Compose, Material Design 3, OkHttp 4.12 |
-| **Server Backend** | Ingestion & Storage | Python 3.12, ThreadingHTTPServer, Thread-safe Lock |
-| **AI / Vision** | Detection Engine | PyTorch 2.2+, Ultralytics YOLOv11 / YOLOv8 |
-| **AI / Vision** | Tracking Engine | ByteTrack, BoT-SORT, Lapx, FilterPy |
-| **Rendering** | Computer Vision GUI | OpenCV (`cv2`), NumPy, Pillow |
-| **CI / CD** | Automated Build | GitHub Actions, Gradle 9.3.1, OpenJDK 17 |
+## Technology Stack
 
----
+| Layer | Technologies |
+|---|---|
+| Android | Kotlin, Jetpack Compose, CameraX, OkHttp |
+| Python | Python 3.12, HTTP server, threading |
+| Detection | Ultralytics YOLO |
+| Tracking | ByteTrack, BoT-SORT, Lapx, FilterPy |
+| Vision | OpenCV, NumPy, Pillow |
+| Build | Gradle, Android Gradle Plugin, JDK 17 |
+| CI/CD | GitHub Actions |
 
-## 5. Repository Structure
+## Project Structure
 
-```
+```text
 CodeAlpha_ObjectDetectionTracking/
-│
-├── .github/
-│   └── workflows/
-│       └── build-apk.yml               # Automated APK compilation workflow
-│
-├── app/                                # Android Camera Client application
-│   ├── build.gradle.kts                # Android build script (CameraX, OkHttp)
+├── .github/workflows/
+│   └── build-apk.yml
+├── app/
 │   └── src/main/
-│       ├── AndroidManifest.xml         # Camera & network permissions
+│       ├── AndroidManifest.xml
 │       ├── java/com/example/
-│       │   ├── MainActivity.kt         # Compose UI & CameraX lifecycle
-│       │   ├── camera/
-│       │   │   └── FrameProcessor.kt   # JPEG compression & rotation
-│       │   └── network/
-│       │       └── FrameSender.kt      # Non-blocking HTTP streaming
+│       │   ├── MainActivity.kt
+│       │   ├── camera/FrameProcessor.kt
+│       │   └── network/FrameSender.kt
 │       └── res/
-│           └── xml/
-│               └── network_security_config.xml # Allows local HTTP cleartext
-│
-├── CodeAlpha_ObjectDetectionTracking/  # Core Python Vision System
-│   ├── app.py                          # Main YOLO + ByteTrack runner
-│   ├── phone_server.py                 # Multi-threaded HTTP phone frame server
-│   ├── requirements.txt                # Python package specifications
+├── CodeAlpha_ObjectDetectionTracking/
+│   ├── app.py
+│   ├── phone_server.py
+│   ├── requirements.txt
 │   ├── src/
-│   │   ├── __init__.py
-│   │   ├── detector.py                 # YOLODetector class
-│   │   └── tracker.py                  # ObjectTracker class
-│   ├── sample/                         # Folder for sample video files
-│   ├── screenshots/                    # Output directory for saved captures
-│   └── output/                         # Output directory for saved videos
-│
-├── app.py                              # Root runner convenience wrapper
-├── phone_server.py                     # Root server convenience wrapper
-├── requirements.txt                    # Root requirements file
-├── build.gradle.kts                    # Root Gradle build configuration
-├── settings.gradle.kts                 # Project modules & repository settings
-├── gradle.properties                   # JVM memory & configuration cache flags
-├── gradlew / gradlew.bat               # Gradle wrapper executables
-└── README.md                           # Master documentation
+│   │   ├── detector.py
+│   │   └── tracker.py
+│   ├── sample/
+│   ├── screenshots/
+│   └── output/
+├── gradle/
+├── gradlew
+├── gradlew.bat
+├── build.gradle.kts
+├── settings.gradle.kts
+├── gradle.properties
+├── metadata.json
+├── .gitignore
+└── README.md
 ```
 
----
+## Python Setup
 
-## 6. Python Environment Setup
+The tested environment is **Python 3.12.10**.
 
-Target Environment: **Python 3.10 – 3.12** (Tested on Python 3.12.10).
+From the Python project directory:
 
-### Step 1: Create and Activate Virtual Environment
-
-**On Windows (Command Prompt):**
 ```cmd
 python -m venv venv
 venv\Scripts\activate
-```
-
-**On Windows (PowerShell):**
-```powershell
-python -m venv venv
-venv\Scripts\Activate.ps1
-```
-
-**On Linux / macOS:**
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-### Step 2: Upgrade PIP & Install Dependencies
-
-```bash
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### Step 3: Verify Installation
+Verify the environment:
 
-Run the verification commands to confirm all modules are operational:
-```bash
+```cmd
 python -c "import cv2; print('OpenCV:', cv2.__version__)"
 python -c "import torch; print('PyTorch:', torch.__version__)"
 python -c "import ultralytics; print('Ultralytics:', ultralytics.__version__)"
-python -c "import requests; print('Requests:', requests.__version__)"
 ```
 
-*(Note: Pretrained weights `yolo11n.pt` will automatically download from official Ultralytics releases on first launch.)*
+The YOLO model weights are downloaded automatically on first use when required.
 
----
+## Phone Camera Setup
 
-## 7. Android Client Setup & APK Compilation
+### 1. Start the phone server
 
-You have two simple ways to get the Android APK:
+On the laptop, inside `CodeAlpha_ObjectDetectionTracking/`:
 
-### Option A: Download Automated Build Artifacts (No Android Studio Required)
-1. Push your repository to GitHub.
-2. In your repository, click the **Actions** tab.
-3. Select the latest **Build Android APK** workflow run.
-4. Under **Artifacts**, download `codealpha-camera-client-apk.zip`.
-5. Unzip and install `app-debug.apk` onto your Android phone via USB or Google Drive.
-
-### Option B: Local Command-Line Compilation
-Build the APK locally using the Gradle wrapper (requires Java 17+):
-```bash
-# On Linux / macOS
-./gradlew assembleDebug
-
-# On Windows
-gradlew.bat assembleDebug
-```
-The compiled APK will be generated at:
-```
-app/build/outputs/apk/debug/app-debug.apk
-```
-Install it onto your connected Android phone using `adb`:
-```bash
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-```
-
----
-
-## 8. Network Configuration & Phone Connection Guide
-
-The Android phone must be able to reach your laptop over your local network.
-
-### How to Find Your Laptop's IP Address
-
-**On Windows:**
-1. Open Command Prompt (`cmd`).
-2. Type `ipconfig` and press Enter.
-3. Look for your active adapter (**Wireless LAN adapter Wi-Fi** or **Ethernet**).
-4. Find the **IPv4 Address** (e.g., `192.168.1.150` or `10.138.211.159`).
-
-> [!IMPORTANT]
-> **Understanding Ports vs. IP Addresses:**
-> `ipconfig` displays your device's **IP addresses only**. Port numbers (`5000`) will **NOT** appear in `ipconfig`.
-> Port 5000 is opened by `phone_server.py` when it runs. You combine the IP from `ipconfig` with the port to form the server URL:
-> `http://<YOUR_IPV4_ADDRESS>:5000`
-
-**On Linux / macOS:**
-```bash
-# Linux
-ip a | grep inet
-
-# macOS
-ifconfig | grep "inet "
-```
-
-### Connection Methods
-
-1. **Same Wi-Fi Router (Recommended):** Connect both your laptop and your Android phone to the same home/office Wi-Fi network.
-2. **Phone Mobile Hotspot:** Turn on **Personal Hotspot** on your Android phone, connect your laptop to the phone's Wi-Fi network, and use the laptop's assigned IP.
-3. **USB Reverse Tethering:** Enable USB Tethering in phone settings for zero-latency wired streaming.
-
----
-
-## 9. Step-by-Step Running Guide
-
-### Architecture: Android Phone Camera Streaming
-
-#### Step 1: Start the Phone Server (Laptop - Terminal 1)
-```bash
+```cmd
 python phone_server.py
 ```
-**Expected Output:**
-```
+
+Expected output:
+
+```text
 ==================================================
 CodeAlpha Object Detection & Tracking
 Phone Camera Server
@@ -269,155 +151,207 @@ Listening on:
 http://0.0.0.0:5000
 
 Waiting for phone camera frames...
-==================================================
 ```
 
-#### Step 2: Start the Detection & Tracking Pipeline (Laptop - Terminal 2)
-```bash
+The server uses **port 5000** by default.
+
+### 2. Start the detection pipeline
+
+Open another terminal:
+
+```cmd
 python app.py --source phone
 ```
-The system will display:
+
+The application waits for frames from the Android client and then sends them through YOLO and the tracker.
+
+### 3. Find the laptop IP
+
+On Windows:
+
+```cmd
+ipconfig
 ```
-[i] Waiting for phone camera frames...
-    1. Open the CodeAlpha Camera app on your Android phone.
-    2. Enter your laptop's IP address (e.g. http://<LAPTOP_IP>:5000).
-    3. Tap 'Start Camera'.
+
+Find the **IPv4 Address** of the active network adapter connecting the phone and laptop.
+
+> **Important:** `ipconfig` shows IP addresses, not port numbers. You will not see `:5000` there.
+
+### 4. Configure the Android app
+
+Open the Android APK and enter the complete URL in **Laptop Server URL**:
+
+```text
+http://YOUR_LAPTOP_IPV4:5000
 ```
-An OpenCV window will display an attractive waiting canvas ready for connection.
 
-#### Step 3: Stream from the Android App
-1. Launch the **CodeAlpha Object Tracking** app on your phone.
-2. Grant camera permissions when prompted.
-3. In the **Laptop Server URL** input field, type:
-   ```
-   http://<YOUR_LAPTOP_IP>:5000
-   ```
-   *(Example: `http://192.168.1.150:5000` or `http://10.138.211.159:5000`)*
-4. Tap **Start Camera**.
-5. The Android app will display live preview and transmission metrics. The laptop window will immediately transition into live YOLO detection and tracking!
+Example:
 
----
+```text
+http://10.138.211.159:5000
+```
 
-### Alternative Modes: Webcam & Video Files
+Then use **Test Ping (GET /)** and, once reachable, tap **Start Camera**.
 
-#### Run with Laptop Webcam
-```bash
+Do **not** use `127.0.0.1` or `localhost` on the phone; those addresses refer to the phone itself.
+
+## Network Options
+
+The phone and laptop can communicate over:
+
+1. **Same Wi-Fi network** — both devices connected to the same router.
+2. **Phone hotspot** — laptop connected to the phone's hotspot.
+3. **USB tethering** — phone connected to the laptop by USB with USB tethering enabled.
+
+The laptop IP can change when the connection method changes, so always check the current active IPv4 address.
+
+## Connectivity Testing
+
+The Python server provides:
+
+```text
+GET  /
+POST /frame
+GET  /latest_frame
+GET  /status
+```
+
+Test locally on the laptop:
+
+```cmd
+curl http://127.0.0.1:5000
+```
+
+You should receive:
+
+```text
+CodeAlpha Object Detection & Tracking Server
+Status: Running
+Endpoint: POST /frame
+```
+
+You can also test the laptop's network address:
+
+```cmd
+curl http://YOUR_LAPTOP_IPV4:5000
+```
+
+If the phone cannot connect, check the server, IP address, network path and Windows Firewall. Do not disable Windows Firewall completely.
+
+## Alternative Input Modes
+
+### Laptop webcam
+
+```cmd
 python app.py --source 0
 ```
-For external USB webcams:
-```bash
+
+For another webcam:
+
+```cmd
 python app.py --source 1
 ```
 
-#### Run with Pre-recorded Video File
-```bash
+### Video file
+
+```cmd
 python app.py --source sample/video.mp4
 ```
 
-#### Save Processed Output Video
-```bash
+### Save processed output
+
+```cmd
 python app.py --source phone --save output/tracked_phone.mp4
 ```
 
----
+## Controls
 
-## 10. Interactive Keyboard Controls (Active Video Window)
+| Key | Action |
+|---|---|
+| `Q` / `ESC` | Quit |
+| `P` / `SPACE` | Pause / resume |
+| `S` | Save screenshot |
+| `T` | Toggle tracking trails |
+| `H` | Toggle HUD |
 
-| Key | Action | Description |
-| :---: | :--- | :--- |
-| `Q` / `ESC` | **Quit** | Gracefully releases all hardware resources and prints session summary. |
-| `P` / `SPACE` | **Pause / Resume** | Pauses or resumes detection and tracking. |
-| `S` | **Screenshot** | Saves a high-resolution screenshot to `screenshots/`. |
-| `T` | **Toggle Trails** | Turns motion trajectory lines ON / OFF. |
-| `H` | **Toggle HUD** | Shows or hides the Heads-Up Display banner. |
+## Android APK
 
----
+The repository includes a GitHub Actions workflow that builds the debug APK automatically.
 
-## 11. Command-Line Options Reference
+**Artifact:**
 
-```bash
-python app.py --help
+```text
+CodeAlpha_ObjectDetectionTracking-debug-apk
 ```
 
-| Argument | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `--source` | `str` | `0` | `'phone'`, webcam index (`0`, `1`), or video file path. |
-| `--phone-server` | `str` | `http://127.0.0.1:5000` | URL of the running `phone_server.py` instance. |
-| `--model` | `str` | `yolo11n.pt` | Pretrained YOLO checkpoint (`yolo11n.pt`, `yolov8n.pt`, `yolo11s.pt`). |
-| `--conf` | `float` | `0.35` | Minimum confidence threshold for detection (0.01 – 1.0). |
-| `--iou` | `float` | `0.45` | IoU threshold for Non-Maximum Suppression and tracker association. |
-| `--tracker` | `str` | `bytetrack.yaml` | Multi-object tracking algorithm (`bytetrack.yaml` or `botsort.yaml`). |
-| `--classes` | `int ...` | `None` | Filter specific classes (e.g. `--classes 0` for person, `0 2` for person/car). |
-| `--save` | `str` | `None` | File path to export annotated video output (`output/result.mp4`). |
-| `--no-trails` | `flag` | `False` | Disables rendering of trajectory history lines. |
-| `--no-hud` | `flag` | `False` | Hides the top and bottom HUD statistics banner. |
-| `--no-display` | `flag` | `False` | Runs headless without opening an OpenCV GUI window. |
-| `--device` | `str` | `None` | Device compute target (`'cpu'`, `'cuda'`, `'mps'`). |
+The workflow uses JDK 17 and the Gradle wrapper. No Android Studio installation is required for the GitHub Actions build.
 
----
+The APK is generated under:
 
-## 12. Troubleshooting Guide
+```text
+app/build/outputs/apk/debug/app-debug.apk
+```
 
-### 1. Android App shows "Hello Android" / Old Screen
-- **Cause:** An old placeholder build was installed on the device.
-- **Solution:** Uninstall the old app from your phone. Install the fresh build from `app/build/outputs/apk/debug/app-debug.apk` or download the latest artifact from GitHub Actions. The updated app has a full CameraX preview, URL input field, and stream stats.
+## Troubleshooting
 
-### 2. "No module named cv2" / "No module named ultralytics"
-- **Cause:** Dependencies were installed globally or the virtual environment is not active.
-- **Solution:** Activate your virtual environment first (`venv\Scripts\activate` on Windows or `source venv/bin/activate` on Linux) and run:
-  ```bash
-  pip install -r requirements.txt
-  ```
+### APK shows "Hello Android"
 
-### 3. Phone App shows "Server Connection Failed" / "Connection Refused"
-- **Verify server:** Ensure `python phone_server.py` is running in Terminal 1.
-- **Verify URL:** Test the URL on your laptop:
-  ```bash
-  curl http://127.0.0.1:5000/
-  ```
-- **Do NOT use `localhost` or `127.0.0.1` on the phone:** The phone is an independent device. `127.0.0.1` on the phone points to the phone itself. You must use the laptop's LAN IPv4 address (e.g. `http://192.168.1.150:5000`).
-- **Windows Firewall:** Windows may block port 5000 on private networks. In Windows Firewall settings, allow Python through the firewall or add an inbound rule for TCP port 5000.
+An old placeholder APK was installed. Build and install the latest GitHub Actions artifact.
 
-### 4. "Port 5000 is not visible in ipconfig"
-- **Explanation:** `ipconfig` **only displays network interfaces and IP addresses**, never active port numbers. Port 5000 is created dynamically by `phone_server.py`. To verify open ports on Windows, run:
-  ```cmd
-  netstat -ano | findstr :5000
-  ```
+### `ModuleNotFoundError: No module named 'cv2'`
 
----
+Activate the Python virtual environment and install the requirements:
 
-## 13. Privacy & Security Statement
+```cmd
+venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-- **100% Local Processing:** All camera frames captured by the Android phone and transmitted to the laptop are processed entirely in local memory.
-- **Zero Cloud Uploads:** No video footage, frame data, or analytical telemetry is ever transmitted to external servers or third-party APIs.
-- **No Biometrics or Facial Recognition:** The system classifies generic object categories (e.g. person, car, bicycle) defined in the COCO dataset. It does not perform facial recognition or store biometric identities.
-- **Explicit Storage Only:** Video recordings are only saved to disk when the user explicitly provides the `--save` parameter.
+### `python phone_server.py` returns immediately
 
----
+The current implementation contains an explicit server entry point and should print its listening address. If it exits, read the displayed Python exception rather than assuming port 5000 is unavailable.
 
-## 14. Performance & Hardware Benchmarks
+### Android keeps connecting
 
-| Hardware Platform | Model Variant | Resolution | Average Inference FPS |
-| :--- | :--- | :---: | :---: |
-| Intel Core i5 (11th Gen CPU) | `yolo11n.pt` | 640x480 | **32 – 42 FPS** |
-| AMD Ryzen 7 5800H (CPU) | `yolo11n.pt` | 640x480 | **38 – 48 FPS** |
-| Apple M2 (MPS Acceleration) | `yolo11n.pt` | 640x480 | **55 – 70 FPS** |
-| NVIDIA RTX 3060 (CUDA) | `yolo11n.pt` | 640x480 | **110 – 140 FPS** |
-| NVIDIA RTX 4070 (CUDA) | `yolo11s.pt` | 640x480 | **130 – 160 FPS** |
+First test:
 
----
+```cmd
+curl http://127.0.0.1:5000
+```
 
-## 15. Future Enhancements
+Then test:
 
-- [ ] Support WebRTC / RTSP transport for ultra-low latency sub-frame streaming.
-- [ ] Multi-camera fusion to track objects across multiple phone angles simultaneously.
-- [ ] Deep appearance Re-ID embeddings for long-term re-identification across re-entries.
-- [ ] Web-based monitoring dashboard using Streamlit / WebSockets.
+```cmd
+curl http://YOUR_LAPTOP_IPV4:5000
+```
 
----
+If local access works but the phone cannot connect, check the laptop IP, network path and Windows Firewall.
 
-## 16. License
+### Connection refused
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+Make sure `phone_server.py` is running and that the Android URL uses the laptop's current IPv4 address and port `5000`.
 
-Developed for the **CodeAlpha Artificial Intelligence Internship — Task 4: Object Detection and Tracking**.
+## CodeAlpha Internship
+
+- **Organization:** CodeAlpha
+- **Program:** Artificial Intelligence Internship
+- **Task:** Task 4 — Object Detection and Tracking
+- **Project:** CodeAlpha Object Detection & Tracking
+- **Domain:** Computer Vision / Artificial Intelligence
+
+## Privacy
+
+Camera frames are intended to be processed locally between the Android phone and the user's laptop. This project does not implement face recognition or biometric identification. Video output is saved only when the user requests it with the appropriate option.
+
+## Future Improvements
+
+- WebSocket-based streaming for more efficient transport
+- Adaptive bitrate and frame-rate control
+- Remote processed-frame preview on the Android client
+- GPU acceleration options and performance profiling
+- Improved reconnection handling
+- Optional secure local-network transport
+
+## License
+
+This project is licensed under the MIT License. See `LICENSE` for details.
