@@ -1,18 +1,21 @@
 # CodeAlpha Object Detection & Tracking 👁️
 
-> A real-time computer vision application for detecting and tracking multiple objects using YOLO and ByteTrack.
+> A real-time computer vision application for detecting and tracking multiple objects using Ultralytics YOLO, ByteTrack / BoT-SORT, OpenCV, and an Android phone camera client.
 
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
 [![YOLO](https://img.shields.io/badge/AI-Ultralytics%20YOLO-orange.svg)](https://www.ultralytics.com/)
 [![OpenCV](https://img.shields.io/badge/Computer%20Vision-OpenCV-green.svg)](https://opencv.org/)
 [![ByteTrack](https://img.shields.io/badge/Tracking-ByteTrack-purple.svg)](https://github.com/ifzhang/ByteTrack)
+[![Android](https://img.shields.io/badge/Android-Kotlin%20%2B%20CameraX-brightgreen.svg)](https://developer.android.com/)
 [![CodeAlpha](https://img.shields.io/badge/CodeAlpha-AI%20Internship-black.svg)](https://www.codealpha.tech/)
 
 ## 📱 Overview
 
 **CodeAlpha Object Detection & Tracking** is a computer vision project that detects objects in real time and assigns persistent tracking IDs as they move between video frames.
 
-The project uses **Ultralytics YOLO** for object detection and **ByteTrack** for multi-object tracking, with OpenCV providing video processing and visualisation.
+The project uses **Ultralytics YOLO** for object detection, **ByteTrack / BoT-SORT** for multi-object tracking, and OpenCV for video processing and visualisation.
+
+The Android companion application turns an Android phone into a network camera. Camera frames are sent over the same local Wi-Fi network to the Python application running on a laptop, where the complete AI pipeline performs detection and tracking.
 
 This project was developed as part of the **CodeAlpha Artificial Intelligence Internship — Task 4: Object Detection and Tracking**.
 
@@ -29,39 +32,75 @@ This project was developed as part of the **CodeAlpha Artificial Intelligence In
 ### 👁️ Object Tracking
 
 - Multi-object tracking with ByteTrack.
-- Persistent tracking IDs across video frames.
 - Optional BoT-SORT tracking.
+- Persistent tracking IDs across video frames.
 - Motion trajectory trails.
 - Active and unique object statistics.
 
 ### 🎥 Video Processing
 
-- Webcam input.
+- Laptop webcam input.
 - Video-file input.
+- Android phone camera input over local Wi-Fi.
 - Annotated video export.
 - Screenshot capture.
-- Headless batch processing.
+- Headless processing.
 - FPS and tracking statistics HUD.
 
-## 🧠 How It Works
+### 📱 Android Camera Client
+
+- CameraX-based live camera preview.
+- Laptop IP and port configuration.
+- JPEG frame transmission over local HTTP.
+- Start / stop streaming controls.
+- Connection status feedback.
+- The phone performs camera capture; YOLO and tracking remain on the laptop.
+
+## 🧠 System Architecture
 
 ```text
-Webcam / Video
-      ↓
-OpenCV Frame Processing
-      ↓
-YOLO Object Detection
-      ↓
-Bounding Boxes + Classes + Confidence
-      ↓
-ByteTrack / BoT-SORT
-      ↓
-Persistent Tracking IDs
-      ↓
-Annotations + Trails + Statistics
+                         LOCAL WI-FI
+┌──────────────────┐                         ┌─────────────────────────┐
+│  Android Phone   │                         │       Laptop            │
+│                  │     JPEG / HTTP         │                         │
+│  CameraX Camera  │ ──────────────────────> │  Python Receiver        │
+│       │          │                         │        │                │
+│       ▼          │                         │        ▼                │
+│  Camera Preview  │                         │      OpenCV             │
+└──────────────────┘                         │        │                │
+                                             │        ▼                │
+                                             │       YOLO              │
+                                             │        │                │
+                                             │        ▼                │
+                                             │ ByteTrack / BoT-SORT    │
+                                             │        │                │
+                                             │        ▼                │
+                                             │ Detection + Tracking    │
+                                             │        │                │
+                                             │        ▼                │
+                                             │ Annotated Laptop View   │
+                                             └─────────────────────────┘
 ```
 
-YOLO identifies objects in each frame, while the tracking stage associates detections across consecutive frames so that moving objects can retain their identities.
+### AI Pipeline
+
+```text
+Camera Frame
+    ↓
+OpenCV Frame Decode
+    ↓
+YOLO Object Detection
+    ↓
+Bounding Boxes + Classes + Confidence
+    ↓
+ByteTrack / BoT-SORT
+    ↓
+Persistent Tracking IDs
+    ↓
+Trails + HUD + Statistics
+    ↓
+Annotated Output
+```
 
 ## 🛠️ Technology Stack
 
@@ -73,23 +112,31 @@ YOLO identifies objects in each frame, while the tracking stage associates detec
 | Object Tracking | ByteTrack / BoT-SORT |
 | Numerical Processing | NumPy |
 | Deep Learning | PyTorch |
-| Android Module | Kotlin + Jetpack Compose |
+| Android | Kotlin + Jetpack Compose |
+| Camera | Android CameraX |
+| Network Transport | Local HTTP + JPEG |
 | Build Automation | GitHub Actions |
 
 ## 🏗️ Project Structure
 
 ```text
 CodeAlpha_ObjectDetectionTracking/
-├── app/                              # Android application module
+├── app/                              # Android camera client
+│   ├── src/main/AndroidManifest.xml  # Camera + network permissions
+│   └── src/main/java/com/example/
+│       └── MainActivity.kt           # CameraX + streaming UI
+│
 ├── CodeAlpha_ObjectDetectionTracking/
-│   ├── app.py                        # Main Python application
+│   ├── app.py                        # Main AI application
+│   ├── phone_server.py               # Android frame receiver
 │   ├── requirements.txt              # Python dependencies
 │   ├── src/
 │   │   ├── detector.py               # YOLO detection
 │   │   └── tracker.py                # Tracking and rendering
-│   ├── sample/                        # Sample-video instructions
+│   ├── sample/                        # Sample-video resources
 │   ├── screenshots/                  # Screenshot resources
 │   └── output/                       # Output-video resources
+│
 ├── .github/
 │   └── workflows/
 │       └── build-apk.yml             # Android APK workflow
@@ -107,7 +154,7 @@ CodeAlpha_ObjectDetectionTracking/
 
 - Python 3.9 or later.
 - A compatible environment for PyTorch and Ultralytics.
-- Webcam for live-camera detection, if desired.
+- Laptop connected to the same Wi-Fi network as the Android phone when using phone mode.
 
 ### Installation
 
@@ -125,7 +172,7 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### Webcam
+### Laptop Webcam
 
 ```bash
 python app.py --source 0
@@ -137,11 +184,47 @@ python app.py --source 0
 python app.py --source sample/traffic.mp4
 ```
 
+### Android Phone Camera
+
+1. Connect the phone and laptop to the **same Wi-Fi network**.
+2. On the laptop, start the Python receiver and AI pipeline:
+
+```bash
+python app.py --source phone
+```
+
+3. The terminal prints the laptop's local IP address, for example:
+
+```text
+[PHONE] Receiver listening on http://192.168.1.105:5000
+[PHONE] Android endpoint: http://<LAPTOP-IP>:5000/frame
+```
+
+4. Install and open the **Object Tracking** Android APK.
+5. Enter the printed laptop URL, for example:
+
+```text
+http://192.168.1.105:5000
+```
+
+6. Tap **Start Streaming**.
+7. The phone camera frames are sent to the laptop and processed by **YOLO + ByteTrack**.
+
+> **Important:** The Android app is a camera client, not the AI inference engine. The YOLO model and tracker run in the Python application on the laptop.
+
 ### Save Annotated Video
 
 ```bash
-python app.py --source sample/traffic.mp4 --save output/tracked_traffic.mp4
+python app.py --source phone --save output/phone_tracking.mp4
 ```
+
+## 🔌 Network Notes
+
+- Both devices must be on the same local network.
+- The laptop firewall must allow the configured TCP port (default `5000`) for local-network connections.
+- The Android client uses HTTP because the receiver is intended for a trusted local network.
+- No cloud service is required for the camera-to-laptop connection.
+- Frames are processed by the local Python application and are not intentionally uploaded to a remote service.
 
 ## ⌨️ Controls
 
@@ -155,9 +238,9 @@ python app.py --source sample/traffic.mp4 --save output/tracked_traffic.mp4
 
 ## 📱 Android APK
 
-The repository also contains an Android application module and a GitHub Actions workflow for building a debug APK.
+The Android module is now a functional **phone-camera companion client** rather than a placeholder screen.
 
-The APK workflow uses JDK 17 and Gradle 9.3.1 and creates an isolated CI debug keystore for the build.
+The GitHub Actions workflow builds a debug APK using JDK 17 and Gradle 9.3.1.
 
 Artifact name:
 
@@ -165,7 +248,13 @@ Artifact name:
 CodeAlpha_ObjectDetectionTracking-debug-apk
 ```
 
-> **Note:** The Python YOLO/ByteTrack implementation is the main CodeAlpha Task 4 implementation. The Android module currently serves as a companion application and does not directly execute the Python detection/tracking pipeline.
+The APK provides:
+
+- CameraX live preview.
+- Laptop server URL configuration.
+- Start / Stop streaming.
+- Connection status.
+- JPEG camera-frame transmission over Wi-Fi.
 
 ## 📸 Screenshots
 
@@ -177,45 +266,50 @@ screenshots/
 ├── multi-object-tracking.png
 ├── tracking-ids.png
 ├── statistics-hud.png
-└── video-output.png
+├── android-camera-client.png
+└── phone-to-laptop-demo.png
 ```
 
 ## 🎥 Project Demonstration
 
-A short demonstration can show:
+A strong demonstration can show:
 
 1. The CodeAlpha internship project introduction.
-2. Live object detection from a webcam or video.
-3. Multiple detected objects.
-4. Persistent tracking IDs while objects move.
-5. Tracking trails and performance statistics.
-6. The YOLO + ByteTrack pipeline.
-7. The GitHub repository and project structure.
+2. The Android camera client opening on the phone.
+3. The laptop Python receiver starting.
+4. The phone and laptop connected to the same Wi-Fi network.
+5. Live camera frames reaching the laptop.
+6. YOLO detecting multiple objects.
+7. ByteTrack assigning persistent IDs.
+8. Motion trails and performance statistics.
+9. The GitHub repository and project structure.
 
 ## 🎯 Internship Project
 
 **Program:** CodeAlpha Artificial Intelligence Internship  
 **Task:** Task 4 — Object Detection and Tracking  
 **Project Type:** AI / Computer Vision  
-**Primary Technologies:** YOLO + ByteTrack + OpenCV
+**Primary Technologies:** YOLO + ByteTrack + OpenCV + Android CameraX
 
-The project is intended to demonstrate practical computer vision and AI implementation as part of internship evaluation and portfolio presentation.
+The project demonstrates practical computer vision, multi-object tracking, network camera integration, and Android/Python interoperability.
 
 ## ⚠️ Limitations
 
-- Detection and tracking performance depends on hardware and model size.
+- Detection and tracking performance depends on laptop hardware and model size.
 - CPU-only systems may provide lower real-time FPS.
+- Wi-Fi quality affects camera-frame latency and throughput.
 - Tracking IDs can change after prolonged disappearance or difficult occlusion.
-- Android on-device YOLO inference is not yet connected to the Python pipeline.
+- The current Android client sends compressed JPEG frames rather than using a full RTSP/WebRTC video stream.
 
 ## 🔮 Future Improvements
 
-- On-device YOLO inference.
-- CameraX integration for Android.
+- WebRTC or RTSP low-latency streaming.
+- On-device YOLO inference as an optional mode.
 - GPU/NPU acceleration.
 - Object counting and analytics.
 - Zone-based detection alerts.
-- Mobile video export.
+- Mobile viewing of annotated results.
+- Configurable frame rate and JPEG quality.
 
 ## 👤 Author
 
