@@ -24,7 +24,8 @@ function setRecordingState(active){state.isRecording=active;el.toggleRecordText.
 function toggleFullscreen(){if(!document.fullscreenElement)el.videoContainer.requestFullscreen().catch(e=>showToast(`Fullscreen error: ${e.message}`,'error'));else document.exitFullscreen()}
 function updateServerBadge(status,label){el.serverStatusBadge.className=`status-pill ${status}`;el.serverStatusText.textContent=label}
 function updatePhoneBadge(status,label){el.phoneStatusBadge.className=`status-pill ${status}`;el.phoneStatusText.textContent=label}
-function copyApkUrl(){const url=el.apkUrlCode.textContent;navigator.clipboard?.writeText(url).then(()=>showToast('APK URL copied','success')).catch(()=>showToast(`Copy manually: ${url}`,'info'))}
+function copyApkUrl(){const url=el.apkUrlCode.textContent;if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(url).then(()=>showToast('APK URL copied','success')).catch(()=>fallbackCopy(url))}else{fallbackCopy(url)}}
+function fallbackCopy(url){const input=document.createElement('textarea');input.value=url;input.style.position='fixed';input.style.opacity='0';document.body.appendChild(input);input.select();try{document.execCommand('copy');showToast('APK URL copied','success')}catch(_){showToast(`Copy manually: ${url}`,'info')}input.remove()}
 function showToast(msg,type='info'){const t=document.createElement('div');t.className=`toast ${type}`;t.textContent=msg;el.toastContainer.appendChild(t);setTimeout(()=>t.remove(),4000)}
 function addLog(message,type='info'){if(!el.logEntries)return;const line=document.createElement('div');line.className=`log-line ${type}`;line.textContent=`[${new Date().toLocaleTimeString()}] ${message}`;el.logEntries.appendChild(line);el.logEntries.scrollTop=el.logEntries.scrollHeight}
 function escapeHtml(value){return String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
