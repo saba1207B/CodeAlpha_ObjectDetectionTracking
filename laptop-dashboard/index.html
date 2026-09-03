@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CodeAlpha Object Detection & Tracking — Laptop Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="dark-theme">
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+          <path d="M2 12h20" />
+        </svg>
+      </div>
+      <div>
+        <h1 class="brand-title">CodeAlpha Object Detection & Tracking</h1>
+        <p class="brand-subtitle">Task 4 • AI Internship • Real-Time MOT (YOLOv11 / ByteTrack)</p>
+      </div>
+    </div>
+
+    <div class="nav-status-group">
+      <!-- Phone Connection Status Badge -->
+      <div id="phoneStatusBadge" class="status-pill waiting" title="Android Camera Client Status">
+        <span class="pulse-dot"></span>
+        <span id="phoneStatusText" class="status-label">Waiting for Phone</span>
+      </div>
+
+      <!-- Backend Server Status Badge -->
+      <div id="serverStatusBadge" class="status-pill connected" title="Python Backend Server">
+        <span class="status-dot"></span>
+        <span id="serverStatusText" class="status-label">Backend Running</span>
+      </div>
+
+      <!-- Detection Engine Badge -->
+      <div id="detectionStatusBadge" class="status-pill active" title="Detection & Tracker Engine">
+        <span class="pulse-dot-cyan"></span>
+        <span id="detectionStatusText" class="status-label">Detection Active</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="dashboard-container">
+
+    <!-- Connection & Quick Guide Card -->
+    <section class="banner-card">
+      <div class="banner-icon">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+          <line x1="12" y1="18" x2="12.01" y2="18"></line>
+        </svg>
+      </div>
+      <div class="banner-content">
+        <div class="banner-title-row">
+          <h2 class="banner-title">Android Phone Camera Connection</h2>
+          <span class="banner-hint">Connect your Android APK to this laptop over local Wi-Fi</span>
+        </div>
+        <div class="banner-inputs">
+          <div class="ip-display-box">
+            <span class="ip-label">Target APK Server URL:</span>
+            <code id="apkUrlCode" class="ip-code">http://127.0.0.1:5000</code>
+            <button id="copyUrlBtn" class="btn btn-sm btn-secondary" title="Copy URL to clipboard">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span>Copy</span>
+            </button>
+          </div>
+          <div class="ip-detail-info">
+            <span>Detected Laptop IP: <strong id="laptopIpText">Detecting...</strong></span>
+            <span class="divider">•</span>
+            <span>Phone IP: <strong id="clientIpText">None</strong></span>
+            <span class="divider">•</span>
+            <span>Last Frame: <strong id="lastFrameTimeText">No frames yet</strong></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Metrics Strip -->
+    <section class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-label">STREAM FPS</span>
+          <span class="metric-icon">⚡</span>
+        </div>
+        <div class="metric-value"><span id="metricFps">0.0</span> <span class="unit">FPS</span></div>
+        <div class="metric-footer">
+          <span id="metricFpsIndicator" class="trend-neutral">● Camera intake</span>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-label">LATENCY</span>
+          <span class="metric-icon">⏱️</span>
+        </div>
+        <div class="metric-value"><span id="metricLatency">--</span> <span class="unit">ms</span></div>
+        <div class="metric-footer">
+          <span id="metricLatencyIndicator" class="trend-good">● Frame transfer lag</span>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-label">RESOLUTION</span>
+          <span class="metric-icon">📐</span>
+        </div>
+        <div class="metric-value"><span id="metricResolution">-- x --</span></div>
+        <div class="metric-footer">
+          <span>CameraX JPEG input</span>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-label">FRAMES INGESTED</span>
+          <span class="metric-icon">📦</span>
+        </div>
+        <div class="metric-value"><span id="metricFrameCount">0</span></div>
+        <div class="metric-footer">
+          <span id="metricDropRate">Zero buffer accumulation</span>
+        </div>
+      </div>
+
+      <div class="metric-card highlight">
+        <div class="metric-header">
+          <span class="metric-label">ACTIVE TRACKS</span>
+          <span class="metric-icon">🎯</span>
+        </div>
+        <div class="metric-value"><span id="metricActiveTracks">0</span> <span class="unit">objects</span></div>
+        <div class="metric-footer">
+          <span>Total unique IDs: <strong id="metricTotalUniqueIds">0</strong></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live Views & Control Panels Grid -->
+    <div class="workspace-grid">
+
+      <!-- Left Column: Video Feeds & Canvas -->
+      <section class="viewport-section">
+        <div class="section-header">
+          <div class="view-mode-tabs">
+            <button id="tabProcessed" class="tab-btn active" data-view="processed">
+              <span class="tab-dot dot-cyan"></span>
+              YOLO Tracking View
+            </button>
+            <button id="tabSplit" class="tab-btn" data-view="split">
+              <span class="tab-dot dot-purple"></span>
+              Split Side-by-Side
+            </button>
+            <button id="tabRaw" class="tab-btn" data-view="raw">
+              <span class="tab-dot dot-amber"></span>
+              Raw Phone Camera
+            </button>
+          </div>
+
+          <div class="viewport-quick-actions">
+            <button id="quickScreenshotBtn" class="btn btn-icon" title="Save Screenshot (S)">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+              </svg>
+            </button>
+            <button id="quickRecordBtn" class="btn btn-icon record-btn" title="Toggle Recording Video">
+              <span class="record-dot"></span>
+            </button>
+            <button id="fullscreenBtn" class="btn btn-icon" title="Toggle Fullscreen">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Video Viewport Container -->
+        <div id="videoContainer" class="video-container mode-processed">
+
+          <!-- Empty State / Waiting Screen -->
+          <div id="waitingPlaceholder" class="waiting-placeholder">
+            <div class="radar-scanner">
+              <div class="radar-circle circle-1"></div>
+              <div class="radar-circle circle-2"></div>
+              <div class="radar-circle circle-3"></div>
+              <div class="radar-sweep"></div>
+              <div class="radar-phone-icon">
+                <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                  <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                </svg>
+              </div>
+            </div>
+            <h3 class="waiting-title">Waiting for Android Camera Stream</h3>
+            <p class="waiting-desc">
+              Open the <strong>CodeAlpha Camera app</strong> on your phone, enter your laptop's URL, and tap <strong>Start Camera</strong>.
+            </p>
+            <div class="waiting-steps">
+              <div class="step-badge">1. Phone & Laptop on same Wi-Fi</div>
+              <div class="step-badge">2. URL: <code id="waitingUrlCode">http://127.0.0.1:5000</code></div>
+              <div class="step-badge">3. Tap 'Start Camera'</div>
+            </div>
+          </div>
+
+          <!-- Processed Frame View -->
+          <div id="processedViewWrap" class="frame-wrap active">
+            <img id="processedFrameImg" class="camera-frame" alt="YOLO Processed Stream" />
+            <div class="frame-overlay-badge top-left">
+              <span class="badge-tag">PROCESSED</span>
+              <span id="overlayTrackerName">ByteTrack</span>
+            </div>
+            <div class="frame-overlay-badge top-right">
+              <span id="overlayFps">0.0 FPS</span>
+            </div>
+          </div>
+
+          <!-- Raw Phone Camera View -->
+          <div id="rawViewWrap" class="frame-wrap hidden">
+            <img id="rawFrameImg" class="camera-frame" alt="Raw Phone Camera Stream" />
+            <div class="frame-overlay-badge top-left raw-badge">
+              <span class="badge-tag">RAW PHONE</span>
+              <span>CameraX</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Viewport Bottom Status Bar -->
+        <div class="viewport-footer">
+          <div class="footer-left">
+            <span id="streamStatusIndicator" class="indicator-dot dot-amber"></span>
+            <span id="streamStatusText">Waiting for phone connection...</span>
+          </div>
+          <div class="footer-right">
+            <span id="recordingStatusText" class="recording-badge hidden">🔴 RECORDING ACTIVE</span>
+            <span id="inferenceTimeBadge" class="info-badge">Inference: ~0ms</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Controls, Tracker Settings & Tracked Objects -->
+      <aside class="controls-sidebar">
+
+        <!-- Master Pipeline Controls -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <h3 class="panel-title">Detection Pipeline</h3>
+            <span class="panel-badge">Control</span>
+          </div>
+
+          <div class="btn-group-row">
+            <button id="startDetectionBtn" class="btn btn-success flex-1">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              <span>Start Detection</span>
+            </button>
+            <button id="stopDetectionBtn" class="btn btn-danger flex-1">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <rect x="6" y="6" width="12" height="12"></rect>
+              </svg>
+              <span>Stop</span>
+            </button>
+            <button id="clearResultsBtn" class="btn btn-secondary" title="Clear track IDs & trajectory history">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              <span>Reset</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Model & Tracker Configuration -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <h3 class="panel-title">Model & Tracker Parameters</h3>
+            <span class="panel-badge">Settings</span>
+          </div>
+
+          <form id="settingsForm" class="settings-form" onsubmit="return false;">
+            <!-- YOLO Model Selector -->
+            <div class="form-group">
+              <label for="modelSelect" class="form-label">
+                <span>YOLO Deep Neural Model</span>
+                <span class="form-note">Auto-downloaded</span>
+              </label>
+              <select id="modelSelect" class="form-select">
+                <option value="yolo11n.pt" selected>YOLOv11 Nano (yolo11n.pt) — Fast (CPU Default)</option>
+                <option value="yolo11s.pt">YOLOv11 Small (yolo11s.pt) — Higher Accuracy</option>
+                <option value="yolov8n.pt">YOLOv8 Nano (yolov8n.pt) — Classic Fast</option>
+                <option value="yolov8s.pt">YOLOv8 Small (yolov8s.pt) — Balanced</option>
+              </select>
+            </div>
+
+            <!-- Multi-Object Tracker Selection -->
+            <div class="form-group">
+              <label for="trackerSelect" class="form-label">
+                <span>Tracking Algorithm (MOT)</span>
+                <span class="form-note">Persistent IDs</span>
+              </label>
+              <select id="trackerSelect" class="form-select">
+                <option value="bytetrack.yaml" selected>ByteTrack (Fastest, low-score recovery)</option>
+                <option value="botsort.yaml">BoT-SORT (Camera motion compensation)</option>
+              </select>
+            </div>
+
+            <!-- Confidence Slider -->
+            <div class="form-group">
+              <div class="slider-label-row">
+                <label for="confRange" class="form-label">Confidence Threshold</label>
+                <span id="confValue" class="slider-num">0.35</span>
+              </div>
+              <input id="confRange" type="range" class="form-range" min="0.05" max="0.95" step="0.05" value="0.35" />
+            </div>
+
+            <!-- IoU Slider -->
+            <div class="form-group">
+              <div class="slider-label-row">
+                <label for="iouRange" class="form-label">IoU Association Threshold</label>
+                <span id="iouValue" class="slider-num">0.45</span>
+              </div>
+              <input id="iouRange" type="range" class="form-range" min="0.10" max="0.90" step="0.05" value="0.45" />
+            </div>
+
+            <!-- Toggle Controls (Trails & HUD) -->
+            <div class="toggle-group">
+              <label class="toggle-control">
+                <input id="toggleTrails" type="checkbox" checked />
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">
+                  <strong>Motion Trajectory Trails</strong>
+                  <small>Fading path history per track ID</small>
+                </span>
+              </label>
+
+              <label class="toggle-control">
+                <input id="toggleHud" type="checkbox" checked />
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">
+                  <strong>Heads-Up Display (HUD)</strong>
+                  <small>In-frame diagnostics overlay</small>
+                </span>
+              </label>
+            </div>
+
+            <!-- Filter Classes (COCO) -->
+            <div class="form-group">
+              <label class="form-label">
+                <span>Class Filter (COCO)</span>
+                <span id="classFilterSummary" class="form-note">All 80 classes</span>
+              </label>
+              <div class="class-chip-container">
+                <button type="button" class="class-chip active" data-class="all">All</button>
+                <button type="button" class="class-chip" data-class="0">Person</button>
+                <button type="button" class="class-chip" data-class="2">Car</button>
+                <button type="button" class="class-chip" data-class="1">Bicycle</button>
+                <button type="button" class="class-chip" data-class="3">Motorcycle</button>
+                <button type="button" class="class-chip" data-class="16">Dog</button>
+                <button type="button" class="class-chip" data-class="15">Cat</button>
+                <button type="button" class="class-chip" data-class="67">Cell Phone</button>
+                <button type="button" class="class-chip" data-class="63">Laptop</button>
+                <button type="button" class="class-chip" data-class="39">Bottle</button>
+                <button type="button" class="class-chip" data-class="24">Backpack</button>
+              </div>
+            </div>
+
+            <button id="applySettingsBtn" class="btn btn-primary btn-block">
+              Apply Settings
+            </button>
+          </form>
+        </div>
+
+        <!-- Currently Tracked Objects Table -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <div class="title-with-badge">
+              <h3 class="panel-title">Tracked Objects</h3>
+              <span id="trackCountBadge" class="count-badge">0 Active</span>
+            </div>
+            <button id="refreshTracksBtn" class="btn btn-sm btn-ghost" title="Refresh table">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6m-9.5-3.5A9 9 0 1 1 3 12"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div class="table-container">
+            <table class="tracks-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Class</th>
+                  <th>Confidence</th>
+                  <th>Centroid (X,Y)</th>
+                  <th>Last Seen</th>
+                </tr>
+              </thead>
+              <tbody id="tracksTableBody">
+                <tr class="empty-row">
+                  <td colspan="5">No active objects detected in the current frame</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Export & Media Actions -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <h3 class="panel-title">Export & Captures</h3>
+          </div>
+
+          <div class="action-buttons-grid">
+            <button id="exportScreenshotBtn" class="btn btn-secondary">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+              <span>Capture Snapshot</span>
+            </button>
+
+            <button id="toggleRecordBtn" class="btn btn-secondary">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <circle cx="12" cy="12" r="3" fill="currentColor"></circle>
+              </svg>
+              <span id="toggleRecordText">Start Recording Video</span>
+            </button>
+          </div>
+
+          <div id="exportAlert" class="export-alert hidden">
+            <span id="exportAlertMsg">Snapshot captured!</span>
+          </div>
+        </div>
+
+        <!-- System & Activity Log -->
+        <div class="panel-card collapsible">
+          <div class="panel-header" id="logToggleHeader">
+            <h3 class="panel-title">System Log & Diagnostics</h3>
+            <span id="logToggleIcon" class="toggle-arrow">▾</span>
+          </div>
+          <div id="logBody" class="log-body">
+            <div id="logEntries" class="log-terminal">
+              <div class="log-line info">[SYSTEM] Dashboard initialized. Polling server at 0.0.0.0:5000...</div>
+            </div>
+          </div>
+        </div>
+
+      </aside>
+
+    </div>
+  </main>
+
+  <!-- Notification Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- JavaScript -->
+  <script src="app.js"></script>
+</body>
+</html>
