@@ -2,103 +2,126 @@
 
 Real-time object detection and multi-object tracking using an Android CameraX client, a Python local-network backend, Ultralytics YOLO, and ByteTrack / BoT-SORT.
 
-## 🚀 One-click Windows startup
+## 🎯 Project purpose
 
-If you are using Windows, you no longer need to type the Python/virtual-environment commands every time.
+This project turns an Android phone into a wireless camera client for a laptop-based computer-vision system. The phone captures camera frames and sends them over a trusted local Wi-Fi network to the Python backend. The laptop performs real YOLO inference and multi-object tracking, while the browser provides the live dashboard.
 
-1. Clone or update the repository once.
-2. Make sure Python 3.10–3.13 is installed (Python 3.12 is recommended).
-3. Double-click **`START.bat`** in the project folder.
-4. The launcher automatically creates `.venv` when needed, installs/updates backend requirements, detects the laptop LAN IPv4, opens the dashboard in your browser, and starts the backend.
-5. The terminal prints the exact Android connection URL, such as `http://192.168.1.25:5000`.
-6. Enter that URL in the Android APK, tap **Test Ping**, then **Start Camera**.
-7. Use the browser dashboard to start YOLO detection and tracking.
-
-Keep the launcher window open while using the project. The first run can take longer because Python dependencies may need to be installed and Ultralytics may need to download `yolo11n.pt`.
-
-To stop the backend, double-click **`STOP.bat`**. It targets the project's `backend/server.py` process only; the browser tab can be closed normally.
-
-> **Important:** `START.bat` is for Windows. Linux/macOS users can use the manual commands in the sections below.
-
-## Architecture
+**The laptop GUI is the web browser.** No separate desktop GUI application is required.
 
 ```text
-Android APK
-    │  POST /frame (JPEG)
-    ▼
-Wi-Fi router / trusted LAN
-    │
-    ▼
-Python backend :5000 (0.0.0.0)
-    │
-    ├── latest raw frame ───────────────► Laptop web browser
-    │
-    ▼
-Ultralytics YOLO (default: yolo11n.pt)
-    │
-    ▼
+Android Camera APK
+       │
+       │ JPEG frames: POST /frame
+       ▼
+Same Wi-Fi / trusted LAN
+       │
+       ▼
+Python Flask backend :5000
+       │
+       ├── Raw frame buffer ───────────────► Browser dashboard
+       │
+       ▼
+Ultralytics YOLO
+       │
+       ▼
 ByteTrack / BoT-SORT
-    │
-    ├── bounding boxes + labels + confidence
-    ├── persistent tracking IDs
-    └── motion trails / HUD
-    │
-    ▼
-Processed frame + detection API ───────► Laptop web browser
+       │
+       ├── Bounding boxes
+       ├── Class labels
+       ├── Confidence scores
+       ├── Persistent tracking IDs
+       └── Motion trails / HUD
+       │
+       ▼
+Processed frames + detection API
+       │
+       ▼
+Laptop web browser dashboard
 ```
 
-The **web browser is the laptop user interface**. The Python backend is the local server/processing engine behind the browser dashboard; no separate desktop GUI application is required.
+## ✨ Current project status
 
-> **Network safety:** the server listens on `0.0.0.0:5000` so a phone on the same Wi-Fi network can connect. This is intended for a trusted LAN only. Do **not** expose port 5000 directly to the public Internet.
+- ✅ Android camera client implemented
+- ✅ Python Flask backend implemented
+- ✅ Real Ultralytics YOLO inference
+- ✅ ByteTrack / BoT-SORT tracking
+- ✅ Live browser dashboard
+- ✅ Android-compatible `/frame`, `/`, `/latest_frame`, and `/status` endpoints
+- ✅ LAN server binding on `0.0.0.0:5000`
+- ✅ Dashboard controls, statistics, class filters and tracking visualization
+- ✅ GitHub Actions Debug APK workflow
+- ✅ JDK 17 Android build configuration
+- ✅ One-click Windows startup and shutdown scripts
+- ✅ Detailed setup and troubleshooting documentation
+- ✅ No fake detections or simulated tracking results
 
-## Repository layout
+The project is ready for **end-to-end Android + laptop LAN testing**. The remaining validation that depends on physical hardware is to run the phone and laptop on the same Wi-Fi network and test the complete camera → backend → YOLO → dashboard path.
+
+## 🚀 One-click Windows startup
+
+If you are using Windows, you do not need to type the Python/virtual-environment commands every time.
+
+1. Clone or update the repository once.
+2. Make sure Python 3.10–3.13 is installed. Python 3.12 is recommended.
+3. Double-click **`START.bat`** in the project folder.
+4. The launcher creates `.venv` when needed, installs/updates backend requirements, detects a private LAN IPv4, opens the dashboard and starts the backend.
+5. The terminal displays the Android connection URL, for example `http://192.168.1.25:5000`.
+6. Enter that URL in the Android APK.
+7. Tap **Test Ping**, then **Start Camera**.
+8. In the browser dashboard, click **Start Detection**.
+
+Keep the `START.bat` terminal open while using the system.
+
+To stop the backend, double-click **`STOP.bat`**. It targets the project's `backend/server.py` process instead of indiscriminately terminating all Python processes.
+
+> **Important:** `START.bat` is Windows-only. Linux/macOS users should follow the manual setup below.
+
+## 📁 Repository layout
 
 ```text
 .
-├── START.bat                 # One-click Windows launcher
-├── STOP.bat                  # One-click Windows backend stop
-├── android-app/              # APK + Android client documentation
-├── app/                      # Android Gradle application source
+├── START.bat
+├── STOP.bat
+├── android-app/
+│   └── app-debug.apk             # Preserved known-good APK
+├── app/                          # Android Gradle application source
 ├── backend/
-│   ├── server.py             # Unified HTTP server + live vision pipeline
-│   ├── app.py                # CLI detection pipeline
+│   ├── server.py                 # Flask server + live vision pipeline
+│   ├── app.py                    # CLI/backend pipeline entry point
 │   ├── requirements.txt
 │   └── src/
-│       ├── detector.py       # Ultralytics YOLO wrapper
-│       └── tracker.py        # ByteTrack / BoT-SORT integration
+│       ├── detector.py           # YOLO wrapper
+│       └── tracker.py             # Tracker integration
 ├── laptop-dashboard/
 │   ├── index.html
 │   ├── style.css
 │   └── app.js
 ├── screenshots/
 ├── output/
-└── .github/workflows/build-apk.yml
+└── .github/workflows/
+    └── build-apk.yml
 ```
 
-## 1. Clone or update
+## 🛠️ Manual installation
 
-### Windows PowerShell
-
-```powershell
-git clone https://github.com/saba1207B/CodeAlpha_ObjectDetectionTracking.git
-cd CodeAlpha_ObjectDetectionTracking
-# Existing checkout:
-git pull origin main
-```
-
-### Linux / macOS
+### 1. Clone or update
 
 ```bash
 git clone https://github.com/saba1207B/CodeAlpha_ObjectDetectionTracking.git
 cd CodeAlpha_ObjectDetectionTracking
+```
+
+For an existing checkout:
+
+```bash
 git pull origin main
 ```
 
-## 2. Python virtual environment
+### 2. Create the Python virtual environment
 
-Python 3.10–3.13 is recommended. Python 3.12 is a good choice.
+Python 3.10–3.13 is recommended; Python 3.12 is recommended for a consistent Windows setup.
 
-### Windows manual setup
+**Windows:**
 
 ```powershell
 py -3.12 -m venv .venv
@@ -106,13 +129,13 @@ py -3.12 -m venv .venv
 python -m pip install --upgrade pip
 ```
 
-If PowerShell blocks activation:
+If PowerShell activation is restricted:
 
 ```bat
 .venv\Scripts\activate.bat
 ```
 
-### Linux / macOS
+**Linux/macOS:**
 
 ```bash
 python3 -m venv .venv
@@ -120,39 +143,43 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 ```
 
-## 3. Install backend requirements
+### 3. Install requirements
 
 ```bash
 python -m pip install -r backend/requirements.txt
 ```
 
-This installs OpenCV, NumPy, PyTorch, Ultralytics, Pillow and Requests. YOLO weights such as `yolo11n.pt` are downloaded by Ultralytics when first required, so the first detection startup needs Internet access unless the weight is already cached.
+The backend uses Flask, OpenCV, NumPy, Ultralytics and related computer-vision dependencies. On first YOLO startup, Ultralytics may download `yolo11n.pt`; therefore first-time detection normally needs Internet access unless the model is already cached locally.
 
-## 4. Start the backend/server
+## ▶️ Start the backend
 
-From the **repository root**:
+From the repository root:
 
 ```bash
 python backend/server.py
 ```
 
-The server listens on `0.0.0.0:5000` and prints the laptop IP and Android URL.
+The server listens on:
 
-Open the dashboard on the laptop in your normal web browser:
+```text
+0.0.0.0:5000
+```
+
+Open the dashboard on the laptop:
 
 ```text
 http://localhost:5000/
 ```
 
-or:
+or, from another device on the same LAN:
 
 ```text
 http://LAPTOP_IPV4:5000/
 ```
 
-**No separate laptop application is required. The browser is the dashboard.**
+The backend is the processing engine; the browser is the user interface.
 
-## 5. Find the laptop IPv4
+## 🌐 Find the laptop IPv4
 
 **Windows:**
 
@@ -160,7 +187,7 @@ http://LAPTOP_IPV4:5000/
 ipconfig
 ```
 
-Use the IPv4 address of the Wi-Fi adapter, for example `192.168.1.25`.
+Use the Wi-Fi adapter's IPv4 address, such as `192.168.1.25`.
 
 **Linux:**
 
@@ -176,13 +203,13 @@ hostname -I
 ipconfig getifaddr en0
 ```
 
-Use `ifconfig` if your Wi-Fi interface is different.
+Use the correct active Wi-Fi interface if `en0` is not applicable.
 
-## 6. Connect the APK over Wi-Fi
+## 📱 Connect the Android APK
 
-Put the phone and laptop on the **same Wi-Fi network**.
+The phone and laptop must be on the **same Wi-Fi network**.
 
-In the Android CodeAlpha Camera app enter:
+In the Android app, enter:
 
 ```text
 http://LAPTOP_IPV4:5000
@@ -194,182 +221,362 @@ Example:
 http://192.168.1.25:5000
 ```
 
-**Do not enter `localhost` or `127.0.0.1` in the Android connection field.** Those addresses refer to the phone itself.
+### Important networking rule
 
-Tap **Test Ping (GET /)** first. A successful ping confirms phone-to-laptop reachability. Then tap **Start Camera**. The APK sends JPEG frames using `POST /frame`.
+**Never enter `localhost` or `127.0.0.1` in the Android app for the laptop server.** Those addresses point back to the phone itself.
 
-## 7. Start real YOLO detection
+Use the laptop's actual LAN IPv4 address.
 
-In the laptop browser dashboard:
+### Connection sequence
 
-1. Confirm **Backend Running**.
-2. Confirm the phone badge changes to **Streaming**.
-3. Confirm the frame count and resolution are increasing.
-4. Keep **YOLOv11 Nano (`yolo11n.pt`)** as the default for CPU-friendly operation.
-5. Select **ByteTrack** or **BoT-SORT**.
-6. Adjust confidence and IoU thresholds if needed.
-7. Select object-class filters if needed.
-8. Toggle motion trails and HUD as desired.
-9. Click **Start Detection**.
+1. Start the Python backend.
+2. Confirm the laptop dashboard opens.
+3. Enter the laptop LAN URL in the Android app.
+4. Tap **Test Ping**.
+5. If ping succeeds, tap **Start Camera**.
+6. Return to the laptop dashboard.
+7. Confirm frames and phone/stream status are updating.
+8. Click **Start Detection**.
+9. Confirm YOLO boxes, labels, confidence values and tracking IDs appear.
 
-The processed stream uses real incoming phone frames and real Ultralytics YOLO + ByteTrack/BoT-SORT output. There are no fake boxes, simulated metrics or mock detections.
+## 🧠 Detection and tracking pipeline
 
-## Dashboard features
+The application uses real incoming phone frames. When detection is started:
 
-- Backend health and Android phone connection status
-- Laptop IPv4 and complete APK connection URL
-- Copy-URL button
-- Received frame count, stream FPS, API round-trip latency and resolution
+1. The backend receives JPEG frames from Android.
+2. Frames are stored in the live frame buffer.
+3. Ultralytics YOLO performs object detection.
+4. The selected tracker associates detections between frames.
+5. Bounding boxes, class labels, confidence values and tracking IDs are generated.
+6. Optional trails/HUD information is rendered.
+7. The annotated frame is exposed to the dashboard.
+8. The dashboard reads current detection/tracking data through the API.
+
+There are **no fake boxes, mock detections, simulated tracking IDs or fabricated performance metrics**.
+
+### Recommended initial configuration
+
+- Model: `yolo11n.pt` / YOLOv11 Nano
+- Tracker: ByteTrack
+- Confidence: use the dashboard default initially
+- IoU: use the dashboard default initially
+- Class filters: all classes initially
+- Trails: optional
+- HUD: optional
+
+`yolo11n.pt` is recommended for CPU-friendly laptop testing. Larger models may improve detection quality but can reduce FPS and increase resource usage.
+
+## 🖥️ Dashboard features
+
+The browser dashboard provides:
+
+- Backend health status
+- Android/stream status
+- Laptop IPv4
+- Complete Android connection URL
+- Copy URL control
+- Received frame count
+- Stream FPS
+- API round-trip latency
+- Frame resolution
 - Last-frame age
-- Raw camera frame view
-- Processed YOLO tracking frame view
-- Split raw/processed view
-- Real bounding boxes, labels, confidence scores and tracking IDs
-- Motion trails and HUD/statistics
+- Raw camera frame
+- Processed YOLO frame
+- Raw/processed split view
+- Bounding boxes
+- Class labels
+- Confidence scores
+- Persistent tracking IDs
 - Current tracked-object table
-- Start Detection / Stop Detection / Reset Results
-- YOLO model selector (`yolo11n.pt` default)
-- Confidence and IoU controls
-- ByteTrack / BoT-SORT selector
-- COCO class filters
-- Motion-trails and HUD toggles
+- Motion trails
+- HUD/statistics overlay
+- Start Detection
+- Stop Detection
+- Reset/Clear Results
+- YOLO model selection
+- Confidence threshold
+- IoU threshold
+- ByteTrack / BoT-SORT selection
+- COCO class filtering
 - Screenshot capture
 - Optional annotated video recording
-- Visible errors for missing frames, server/Wi-Fi problems, missing packages and YOLO/weight initialization failures
+- Visible server, Wi-Fi, frame, package and YOLO errors
 
-## Android-compatible API
+## 🔌 API reference
 
-These endpoints remain compatible with the Android client:
+### Android-compatible endpoints
 
 | Method | Endpoint | Purpose |
 |---|---|---|
-| GET | `/` | Health check / dashboard |
+| GET | `/` | Health check and dashboard |
 | POST | `/frame` | Receive Android JPEG frame |
-| GET | `/latest_frame` | Latest raw camera frame |
-| GET | `/status` | Server and frame metrics |
+| GET | `/latest_frame` | Return latest raw frame |
+| GET | `/status` | Return server/stream metrics |
 
-Dashboard/vision endpoints:
+### Dashboard and vision endpoints
 
 | Method | Endpoint | Purpose |
 |---|---|---|
-| GET | `/processed_frame` | Latest YOLO annotated frame |
+| GET | `/processed_frame` | Latest annotated YOLO frame |
 | GET | `/detections` | Current tracked objects |
-| POST | `/start-detection` | Start detection |
-| POST | `/stop-detection` | Stop detection |
-| GET | `/settings` | Current settings |
-| POST | `/settings` | Update model/tracker/thresholds/filters |
-| POST | `/clear-results` | Reset tracker state |
-| POST | `/screenshot` | Capture current frame |
+| POST | `/start-detection` | Start real detection/tracking |
+| POST | `/stop-detection` | Stop detection/tracking |
+| GET | `/settings` | Read current settings |
+| POST | `/settings` | Update model/tracker/threshold/filter settings |
+| POST | `/clear-results` | Reset tracking/results state |
+| POST | `/screenshot` | Capture a frame |
 | POST | `/recording/start` | Start annotated recording |
 | POST | `/recording/stop` | Stop annotated recording |
 
-## 8. Firewall and port 5000
+## 🔥 Firewall and LAN access
 
-If the phone cannot connect while the dashboard works locally, allow TCP port 5000 on the laptop's **trusted/private** network.
+If the dashboard works on the laptop but the Android **Test Ping** fails, the firewall is a likely cause.
 
-Windows PowerShell as Administrator:
+### Windows
+
+Run PowerShell as Administrator:
 
 ```powershell
 New-NetFirewallRule -DisplayName "CodeAlpha Object Detection 5000" -Direction Inbound -Protocol TCP -LocalPort 5000 -Action Allow -Profile Private
 ```
 
-Linux/UFW example:
+Only use this for a trusted/private network profile.
+
+### Linux/UFW
 
 ```bash
 sudo ufw allow 5000/tcp
 sudo ufw status
 ```
 
-Use the macOS firewall settings if inbound connections are blocked. Never expose this development server directly to the public Internet.
+### Network isolation
 
-## 9. Troubleshooting
+Some guest, campus, office and public Wi-Fi networks prevent devices from communicating with one another. If both devices are connected but the phone cannot reach the laptop, test using a trusted network that permits device-to-device traffic.
 
-### Connection refused / timeout
+> **Security:** this is a local development server. Do not port-forward or expose TCP port 5000 directly to the public Internet.
 
-- Confirm `backend/server.py` is running (or that `START.bat` is still open on Windows).
-- Confirm it reports `0.0.0.0:5000`.
-- Verify phone and laptop are on the same Wi-Fi.
-- Use the laptop's Wi-Fi IPv4, not `127.0.0.1`.
-- Test `http://LAPTOP_IPV4:5000/` from another LAN device.
-- Check the firewall.
-- Guest/campus Wi-Fi may isolate devices; use a network that permits device-to-device traffic.
+## 🧪 End-to-end test checklist
 
-### Test Ping fails on Android
+Use this checklist after cloning/updating the repository.
 
-Test Ping checks network access to the server; it does not require YOLO. Fix the IP, Wi-Fi isolation and firewall first.
+### Laptop
+
+- [ ] Python installed
+- [ ] Virtual environment created
+- [ ] Requirements installed
+- [ ] Backend starts without a fatal error
+- [ ] Server reports/listens on port 5000
+- [ ] Dashboard opens at `http://localhost:5000/`
+- [ ] Laptop Wi-Fi IPv4 identified
+
+### Android
+
+- [ ] APK installed
+- [ ] Phone and laptop are on the same Wi-Fi
+- [ ] Android connection URL uses laptop IPv4
+- [ ] No `localhost`/`127.0.0.1` used
+- [ ] **Test Ping** succeeds
+- [ ] Camera starts
+- [ ] Frames are transmitted
+
+### Dashboard
+
+- [ ] Android/stream status becomes active
+- [ ] Frame count increases
+- [ ] Resolution is reported
+- [ ] Stream FPS updates
+- [ ] Raw frame appears
+- [ ] **Start Detection** succeeds
+- [ ] Processed frame appears
+- [ ] Real YOLO detections appear when objects are visible
+- [ ] Tracking IDs persist across suitable frames
+- [ ] Tracker/class/filter controls respond
+- [ ] Screenshot works
+- [ ] Recording works if enabled
+
+## 🐞 Troubleshooting
+
+### Android cannot connect
+
+Check, in order:
+
+1. Backend is running.
+2. Backend is bound to `0.0.0.0:5000`.
+3. Phone and laptop are on the same Wi-Fi.
+4. Android uses the laptop's Wi-Fi IPv4.
+5. Port 5000 is allowed through the private-network firewall.
+6. The Wi-Fi network is not using client isolation.
+
+### Test Ping fails
+
+**Test Ping only checks phone-to-backend connectivity.** YOLO does not need to be running for this test. Fix IP, Wi-Fi and firewall problems before troubleshooting detection.
 
 ### No frames received
 
-- Start the Android camera after entering `http://LAPTOP_IPV4:5000`.
-- Confirm the phone shows streaming.
-- Check whether the laptop received a different IP after reconnecting to Wi-Fi.
-- Never use `localhost` or `127.0.0.1` in the Android URL.
+- Start the Android camera.
+- Confirm the connection URL is correct.
+- Check the laptop IP again if Wi-Fi was disconnected/reconnected.
+- Confirm the dashboard is reachable from the phone's network.
+- Check the backend terminal for incoming requests/errors.
 
-### Missing Python packages
+### YOLO model/weights error
 
-```bash
-python -m pip install -r backend/requirements.txt
+Keep `yolo11n.pt` selected for the initial test and allow Ultralytics to download the model if it is not cached. If the laptop is offline, a locally available compatible weight file is required.
+
+The application surfaces the actual engine error instead of pretending that inference succeeded.
+
+### Processed frame is empty
+
+The processed endpoint does not silently substitute the raw frame. Confirm:
+
+1. Phone camera is streaming.
+2. Frames are increasing.
+3. **Start Detection** has been clicked.
+4. YOLO initialized successfully.
+5. The backend terminal contains no inference error.
+
+### Low FPS / high latency
+
+- Start with `yolo11n.pt`.
+- Prefer ByteTrack for lighter tracking.
+- Reduce camera resolution if necessary.
+- Reduce transmission rate if Wi-Fi is congested.
+- Close other CPU/GPU-heavy applications.
+- Use a stable Wi-Fi connection.
+- A wired laptop connection can reduce LAN variability.
+
+## 📦 GitHub Actions — Android APK
+
+The repository contains a **Build Android APK** workflow.
+
+The workflow is configured to:
+
+- use JDK 17;
+- make `gradlew` executable;
+- run `./gradlew assembleDebug`;
+- verify the generated Debug APK exists and is non-empty;
+- upload the APK as `CodeAlpha_ObjectDetectionTracking-debug-apk`.
+
+### Latest known-good build
+
+The latest verified GitHub Actions build completed successfully as **Build Android APK run #22**.
+
+Successful run:
+
+https://github.com/saba1207B/CodeAlpha_ObjectDetectionTracking/actions/runs/33707787292
+
+Build commit:
+
+```text
+11ba43102bb0f51c1fe3620ebf73904f9767823d
 ```
 
-Restart `backend/server.py` after installation.
+Artifact:
 
-### Missing YOLO weights / model error
+```text
+CodeAlpha_ObjectDetectionTracking-debug-apk
+```
 
-Keep `yolo11n.pt` selected and allow Ultralytics to download it on first detection startup. If the machine is offline, restore an existing cached weight or provide the required local weight file, then restart the backend. The dashboard reports the actual engine error instead of generating fake results.
+The APK generated by that successful build is suitable for the current Android source. Laptop-only changes such as `START.bat`, `STOP.bat` and README documentation do **not** require rebuilding the APK.
 
-### Low FPS
+### Downloading a new APK from Actions
 
-- Keep `yolo11n.pt` for CPU operation.
-- Reduce phone stream resolution if necessary.
-- Reduce Android transmission rate if Wi-Fi is congested.
-- Prefer a wired laptop network connection where possible.
-- Close other CPU/GPU-heavy applications.
-- Prefer ByteTrack for a lighter tracking workload.
-- Increase confidence threshold when appropriate.
-
-### Processed view is empty
-
-The processed endpoint intentionally does not fall back to a raw frame. Start the phone stream, click **Start Detection**, and wait for the first real inference result.
-
-## 10. GitHub Actions APK build
-
-The **Build Android APK** workflow:
-
-- uses JDK 17;
-- makes `gradlew` executable;
-- runs `./gradlew assembleDebug`;
-- verifies `app/build/outputs/apk/debug/app-debug.apk` exists and is non-empty;
-- uploads the artifact named `CodeAlpha_ObjectDetectionTracking-debug-apk`.
-
-After a successful run on GitHub:
-
-1. Open **Actions**.
+1. Open the repository's **Actions** page.
 2. Select **Build Android APK**.
-3. Open the successful **Build Debug APK** run.
+3. Open a successful build run.
 4. Scroll to **Artifacts**.
-5. Open `CodeAlpha_ObjectDetectionTracking-debug-apk`.
-6. Download the ZIP and extract `app-debug.apk`.
+5. Select `CodeAlpha_ObjectDetectionTracking-debug-apk`.
+6. Extract `app-debug.apk` from the downloaded ZIP.
 
-A known-good APK is preserved at `android-app/app-debug.apk` and is not replaced by a failed build.
+A known-good APK is also preserved at:
 
-## Local Android build
+```text
+android-app/app-debug.apk
+```
 
-Linux/macOS:
+It should not be replaced by a failed CI output.
+
+## 🔧 Android build configuration
+
+The Android Gradle configuration uses Java 17 through `compileOptions`.
+
+The obsolete Kotlin `kotlinOptions { jvmTarget = "17" }` configuration that caused the earlier CI failure was removed. The current build workflow uses JDK 17 and the Gradle wrapper.
+
+Local build commands:
+
+**Linux/macOS:**
 
 ```bash
 ./gradlew assembleDebug
 ```
 
-Windows:
+**Windows:**
 
 ```bat
 gradlew.bat assembleDebug
 ```
 
-Output:
+Generated APK:
 
 ```text
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
-The Android Gradle configuration preserves Java 17 using `compileOptions` and removes the obsolete Kotlin `kotlinOptions { jvmTarget = "17" }` block that caused the failed CI build.
+## 🧩 One-click workflow summary
+
+### Windows
+
+```text
+Double-click START.bat
+        ↓
+Virtual environment + dependencies
+        ↓
+LAN IPv4 detected
+        ↓
+Browser dashboard opens
+        ↓
+Backend starts on port 5000
+        ↓
+Enter displayed URL in Android APK
+        ↓
+Test Ping
+        ↓
+Start Camera
+        ↓
+Start Detection in browser
+        ↓
+YOLO + tracking + live dashboard
+```
+
+### Stopping
+
+```text
+Double-click STOP.bat
+        ↓
+backend/server.py process stops
+        ↓
+Close browser tab normally
+```
+
+## 🤖 Review / recheck request
+
+This repository is also intended to be independently reviewed after implementation changes. A reviewer should inspect the actual source rather than relying only on this README, with particular attention to:
+
+- Android-to-laptop IP handling
+- `/frame` compatibility
+- Flask binding and LAN accessibility
+- YOLO initialization and real inference
+- ByteTrack / BoT-SORT integration
+- frame buffering and concurrency
+- dashboard API compatibility
+- error handling and non-fake status reporting
+- Gradle/JDK compatibility
+- GitHub Actions APK artifact generation
+- Windows launcher behavior
+- firewall and trusted-LAN assumptions
+
+The goal is to keep the implementation simple, reproducible and testable while avoiding unnecessary changes that do not address a real issue.
+
+## 📄 License / project note
+
+This is a CodeAlpha project implementation for learning and demonstration of real-time computer vision, Android networking, object detection and multi-object tracking.
