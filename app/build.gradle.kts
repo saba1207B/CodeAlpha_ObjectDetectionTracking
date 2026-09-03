@@ -29,22 +29,14 @@ android {
     }
   }
 
+  // Keep Java 17 compatibility without the obsolete Kotlin jvmTarget DSL.
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
   }
 
-  kotlinOptions {
-    jvmTarget = "17"
-  }
-
-  buildFeatures {
-    compose = true
-  }
-
-  packaging {
-    resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
-  }
+  buildFeatures { compose = true }
+  packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }
 
 dependencies {
@@ -65,7 +57,6 @@ dependencies {
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.okhttp)
-
   debugImplementation(libs.androidx.compose.ui.tooling)
   debugImplementation(libs.androidx.compose.ui.test.manifest)
   testImplementation(libs.junit)
