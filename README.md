@@ -2,6 +2,24 @@
 
 Real-time object detection and multi-object tracking using an Android CameraX client, a Python local-network backend, Ultralytics YOLO, and ByteTrack / BoT-SORT.
 
+## 🚀 One-click Windows startup
+
+If you are using Windows, you no longer need to type the Python/virtual-environment commands every time.
+
+1. Clone or update the repository once.
+2. Make sure Python 3.10–3.13 is installed (Python 3.12 is recommended).
+3. Double-click **`START.bat`** in the project folder.
+4. The launcher automatically creates `.venv` when needed, installs/updates backend requirements, detects the laptop LAN IPv4, opens the dashboard in your browser, and starts the backend.
+5. The terminal prints the exact Android connection URL, such as `http://192.168.1.25:5000`.
+6. Enter that URL in the Android APK, tap **Test Ping**, then **Start Camera**.
+7. Use the browser dashboard to start YOLO detection and tracking.
+
+Keep the launcher window open while using the project. The first run can take longer because Python dependencies may need to be installed and Ultralytics may need to download `yolo11n.pt`.
+
+To stop the backend, double-click **`STOP.bat`**. It targets the project's `backend/server.py` process only; the browser tab can be closed normally.
+
+> **Important:** `START.bat` is for Windows. Linux/macOS users can use the manual commands in the sections below.
+
 ## Architecture
 
 ```text
@@ -13,7 +31,7 @@ Wi-Fi router / trusted LAN
     ▼
 Python backend :5000 (0.0.0.0)
     │
-    ├── latest raw frame ───────────────► Laptop dashboard
+    ├── latest raw frame ───────────────► Laptop web browser
     │
     ▼
 Ultralytics YOLO (default: yolo11n.pt)
@@ -26,8 +44,10 @@ ByteTrack / BoT-SORT
     └── motion trails / HUD
     │
     ▼
-Processed frame + detection API ───────► Laptop dashboard
+Processed frame + detection API ───────► Laptop web browser
 ```
+
+The **web browser is the laptop user interface**. The Python backend is the local server/processing engine behind the browser dashboard; no separate desktop GUI application is required.
 
 > **Network safety:** the server listens on `0.0.0.0:5000` so a phone on the same Wi-Fi network can connect. This is intended for a trusted LAN only. Do **not** expose port 5000 directly to the public Internet.
 
@@ -35,15 +55,17 @@ Processed frame + detection API ───────► Laptop dashboard
 
 ```text
 .
+├── START.bat                 # One-click Windows launcher
+├── STOP.bat                  # One-click Windows backend stop
 ├── android-app/              # APK + Android client documentation
 ├── app/                      # Android Gradle application source
 ├── backend/
-│   ├── server.py              # Unified HTTP server + live vision pipeline
-│   ├── app.py                 # CLI detection pipeline
+│   ├── server.py             # Unified HTTP server + live vision pipeline
+│   ├── app.py                # CLI detection pipeline
 │   ├── requirements.txt
 │   └── src/
-│       ├── detector.py        # Ultralytics YOLO wrapper
-│       └── tracker.py         # ByteTrack / BoT-SORT integration
+│       ├── detector.py       # Ultralytics YOLO wrapper
+│       └── tracker.py        # ByteTrack / BoT-SORT integration
 ├── laptop-dashboard/
 │   ├── index.html
 │   ├── style.css
@@ -76,7 +98,7 @@ git pull origin main
 
 Python 3.10–3.13 is recommended. Python 3.12 is a good choice.
 
-### Windows
+### Windows manual setup
 
 ```powershell
 py -3.12 -m venv .venv
@@ -116,7 +138,7 @@ python backend/server.py
 
 The server listens on `0.0.0.0:5000` and prints the laptop IP and Android URL.
 
-Open the dashboard on the laptop:
+Open the dashboard on the laptop in your normal web browser:
 
 ```text
 http://localhost:5000/
@@ -127,6 +149,8 @@ or:
 ```text
 http://LAPTOP_IPV4:5000/
 ```
+
+**No separate laptop application is required. The browser is the dashboard.**
 
 ## 5. Find the laptop IPv4
 
@@ -176,7 +200,7 @@ Tap **Test Ping (GET /)** first. A successful ping confirms phone-to-laptop reac
 
 ## 7. Start real YOLO detection
 
-In the laptop dashboard:
+In the laptop browser dashboard:
 
 1. Confirm **Backend Running**.
 2. Confirm the phone badge changes to **Streaming**.
@@ -262,7 +286,7 @@ Use the macOS firewall settings if inbound connections are blocked. Never expose
 
 ### Connection refused / timeout
 
-- Confirm `python backend/server.py` is running.
+- Confirm `backend/server.py` is running (or that `START.bat` is still open on Windows).
 - Confirm it reports `0.0.0.0:5000`.
 - Verify phone and laptop are on the same Wi-Fi.
 - Use the laptop's Wi-Fi IPv4, not `127.0.0.1`.
